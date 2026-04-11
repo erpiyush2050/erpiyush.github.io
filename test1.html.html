@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OJD Education Full Exam</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{font-family:Arial;margin:0;background:#eef3f8}
+header{background:#0d6efd;color:white;text-align:center;padding:15px}
+.main{display:flex}
+.palette{width:230px;background:white;height:100vh;overflow:auto;border-right:2px solid #ddd;padding:10px}
+.palette button{width:45px;height:40px;margin:4px;border:none;border-radius:6px;background:#dee2e6;cursor:pointer}
+.palette button.answered{background:#198754;color:white}
+.container{flex:1;padding:20px}
+.question{background:white;padding:20px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,.2)}
+.option{display:block;margin:8px 0;padding:8px;background:#f1f3f5;border-radius:8px;cursor:pointer}
+.timer{float:right;font-size:20px;color:red;font-weight:bold}
+button.nav{background:#0d6efd;color:white;border:none;padding:10px 20px;border-radius:8px;margin:5px}
+.result{display:none;background:white;margin-top:20px;padding:20px;border-radius:10px}
+</style>
+</head>
+<body>
+<header>
+<h2>OJD Education</h2>
+<h4>Trainer: Piyush Dixit</h4>
+<h3>Computer & IT Fundamentals Exam</h3>
+</header>
+
+<div class="main">
+<div class="palette" id="palette"></div>
+
+<div class="container">
+<label>Student Name:</label>
+<input type="text" id="sname" style="width:100%;padding:8px;margin-bottom:10px">
+<div class="timer">Time: <span id="time">45:00</span></div>
+
+<div id="qbox" class="question"></div>
+<button class="nav" onclick="prevQ()">Previous</button>
+<button class="nav" onclick="nextQ()">Next</button>
+<button class="nav" onclick="submitQuiz()">Submit</button>
+
+<div class="result" id="result">
+<h2 id="rname"></h2>
+<h3 id="rscore"></h3>
+<canvas id="chart"></canvas>
+</div>
+
+</div>
+</div>
+
+<script>
+let duration=2700;
+setInterval(()=>{
+duration--;
+let m=Math.floor(duration/60);
+let s=duration%60;
+document.getElementById("time").innerText=m+":"+(s<10?"0":"")+s;
+if(duration<=0) submitQuiz();
+},1000);
+
+const questions=[
+{type:'section',title:'Section A MCQ'},
+
+{type:'mcq',q:'The first generation of computers used which for circuitry?',o:['Transistors','Integrated Circuits','Vacuum Tubes','Microprocessors'],a:2},
+{type:'mcq',q:'Which generation introduced Integrated Circuits?',o:['First','Second','Third','Fourth'],a:2},
+{type:'mcq',q:'Which is an example of IT gadget?',o:['Smartwatch','Tablet','Fitness Tracker','Laptop'],a:3},
+{type:'mcq',q:'Abacus belongs to which era?',o:['First Generation','Electro‑mechanical','Pre‑mechanical','Modern'],a:2},
+{type:'mcq',q:'Microprocessors are hallmark of which generation?',o:['Second','Third','Fourth','Fifth'],a:2},
+{type:'mcq',q:'NOT application of IT gadget in healthcare?',o:['Patient monitoring','EHR','Heartbeat sensors','Retail inventory'],a:3},
+{type:'mcq',q:'Second generation main component?',o:['Vacuum','Transistor','IC','Microprocessor'],a:1},
+{type:'mcq',q:'Fifth generation technology?',o:['AI','VLSI','Transistor','Vacuum'],a:0},
+{type:'mcq',q:'Physical component of computer?',o:['OS','MS Word','CPU','Antivirus'],a:2},
+{type:'mcq',q:'Software refers to?',o:['Physical parts','Instructions','Input only','Output only'],a:1},
+{type:'mcq',q:'Example of system software?',o:['Windows 11','Photoshop','Chrome','Excel'],a:0},
+{type:'mcq',q:'Firmware is stored in?',o:['Hard disk','ROM','Application','Malware'],a:1},
+{type:'mcq',q:'Brain of computer?',o:['RAM','HDD','CPU','Motherboard'],a:2},
+{type:'mcq',q:'CPU responsible for?',o:['Permanent storage','Display','Execute instructions','Internet'],a:2},
+{type:'mcq',q:'Three units of CPU?',o:['Monitor keyboard mouse','ALU CU Registers','HDD RAM ROM','IOS'],a:1},
+{type:'mcq',q:'ALU performs?',o:['Logical','Arithmetic','Both','Instruction control'],a:2},
+{type:'mcq',q:'CPU speed measured in?',o:['MB','GB','GHz','bps'],a:2},
+{type:'mcq',q:'Input device?',o:['Printer','Monitor','Keyboard','Speaker'],a:2},
+{type:'mcq',q:'OCR device?',o:['Printer','Plotter','Scanner','Webcam'],a:2},
+{type:'mcq',q:'Gaming movement device?',o:['Microphone','Joystick','Stylus','Barcode'],a:1},
+{type:'mcq',q:'Biometric authentication?',o:['Fingerprint','Retina','Face','All'],a:3},
+{type:'mcq',q:'Function of input device?',o:['Display','Hardcopy','Send data','Store'],a:2},
+{type:'mcq',q:'Output device?',o:['Mouse','Scanner','Projector','Touchpad'],a:2},
+{type:'mcq',q:'Printer quality unit?',o:['Pixels','Hz','DPI','GB'],a:2},
+{type:'mcq',q:'Printer using toner?',o:['Inkjet','Dot matrix','Laser','Thermal'],a:2},
+{type:'mcq',q:'Speakers are?',o:['Input','Processing','Storage','Output'],a:3},
+{type:'mcq',q:'Monitor clarity by?',o:['Size','Resolution','Brand','Color'],a:1},
+{type:'mcq',q:'Volatile memory?',o:['ROM','HDD','RAM','SSD'],a:2},
+{type:'mcq',q:'ROM stores?',o:['User files','Daily OS','Firmware','Temp'],a:2},
+{type:'mcq',q:'No moving parts storage?',o:['HDD','SSD','Floppy','CD'],a:1},
+{type:'mcq',q:'DVD capacity?',o:['700MB','4.7GB','32GB','1TB'],a:1},
+{type:'mcq',q:'Primary memory?',o:['HDD','USB','RAM','SD'],a:2},
+{type:'mcq',q:'1 TB equals?',o:['1024B','1024KB','1024MB','1024GB'],a:3},
+{type:'mcq',q:'PowerPoint is?',o:['System','Utility','Presentation','Database'],a:2},
+{type:'mcq',q:'Operating system is?',o:['Application','System','Utility','Programming'],a:1},
+{type:'mcq',q:'Disk defragmenter?',o:['Application','System','Utility','Malware'],a:2},
+{type:'mcq',q:'Antivirus category?',o:['System','Utility','Driver','Entertainment'],a:1},
+{type:'mcq',q:'Interface between user & hardware?',o:['Word','Browser','OS','Compiler'],a:2},
+{type:'mcq',q:'Open source software?',o:['Proprietary','Freeware','Open source','Shareware'],a:2},
+{type:'mcq',q:'Example open source?',o:['Windows','Photoshop','Linux','macOS'],a:2},
+{type:'mcq',q:'Secret code owned software?',o:['Freeware','Open','Proprietary','Public'],a:2},
+{type:'mcq',q:'Mobile apps store for?',o:['Desktop','Mainframe','Mobile','Server'],a:2},
+{type:'mcq',q:'Proprietary mobile OS?',o:['Android','Linux','iOS','Chrome'],a:2},
+{type:'mcq',q:'NOT OS function?',o:['Memory','Word docs','Process','File'],a:1},
+{type:'mcq',q:'GUI full form?',o:['General','Graphical','Graphic unit','Grand'],a:1},
+{type:'mcq',q:'CLI OS example?',o:['Windows','macOS','MS‑DOS','Android'],a:2},
+{type:'mcq',q:'Smartphone OS stored in?',o:['RAM','Internal storage','Cache','Floppy'],a:1},
+{type:'mcq',q:'iPhone OS?',o:['macOS','Windows','iOS','Android'],a:2},
+{type:'mcq',q:'Taskbar is?',o:['Menu','Title','Taskbar','Status'],a:2},
+{type:'mcq',q:'Start button location?',o:['Desktop','Taskbar','Tray','Title'],a:1},
+
+{type:'section',title:'Section B True False'},
+
+{type:'tf',q:'ENIAC was first generation.',a:true},
+{type:'tf',q:'Printer is input device.',a:false},
+{type:'tf',q:'CPU executes instructions.',a:true},
+{type:'tf',q:'RAM is non‑volatile.',a:false},
+{type:'tf',q:'.mp3 is image file.',a:false},
+{type:'tf',q:'Windows is open source.',a:false},
+{type:'tf',q:'Taskbar can be moved.',a:true},
+{type:'tf',q:'Ctrl+P prints.',a:true},
+{type:'tf',q:'Utility software maintains system.',a:true},
+{type:'tf',q:'Folder cannot contain folder.',a:false},
+{type:'tf',q:'Android based on Linux.',a:true},
+{type:'tf',q:'GUI uses commands.',a:false},
+{type:'tf',q:'System tray on left.',a:false},
+{type:'tf',q:'Byte = 4 bits.',a:false},
+{type:'tf',q:'Plotter large drawings.',a:true},
+{type:'tf',q:'Freeware = Open source.',a:false},
+{type:'tf',q:'Wallpaper can be changed.',a:true},
+{type:'tf',q:'Control unit does arithmetic.',a:false},
+{type:'tf',q:'Scanner digitizes documents.',a:true},
+{type:'tf',q:'USB delete goes recycle.',a:false},
+{type:'tf',q:'Fifth gen focuses AI.',a:true},
+{type:'tf',q:'Speakers input.',a:false},
+{type:'tf',q:'OS manages memory.',a:true},
+{type:'tf',q:'.jpg video file.',a:false},
+{type:'tf',q:'MS‑DOS CLI.',a:true},
+{type:'tf',q:'Add/remove uninstall.',a:true},
+{type:'tf',q:'CPU speed MB.',a:false},
+{type:'tf',q:'Touchpad input.',a:true},
+{type:'tf',q:'ROM stores firmware.',a:true},
+{type:'tf',q:'Tablet OS very different.',a:false},
+{type:'tf',q:'Shortcut copy program.',a:false},
+{type:'tf',q:'Disk cleanup frees space.',a:true},
+{type:'tf',q:'Proprietary modifiable.',a:false},
+{type:'tf',q:'Motherboard connects hardware.',a:true},
+{type:'tf',q:'Barcode reader output.',a:false},
+{type:'tf',q:'Mouse double click speed fixed.',a:false},
+{type:'tf',q:'.exe executable.',a:true},
+{type:'tf',q:'OCR editable text.',a:true},
+{type:'tf',q:'iOS by Google.',a:false},
+{type:'tf',q:'OS only for games.',a:false},
+{type:'tf',q:'Webcam output.',a:false},
+{type:'tf',q:'SSD faster.',a:true},
+{type:'tf',q:'Start menu left.',a:true},
+{type:'tf',q:'Extension identifies file.',a:true},
+{type:'tf',q:'Multitasking absent.',a:false},
+{type:'tf',q:'Antivirus application.',a:false},
+{type:'tf',q:'Transistor third gen.',a:false},
+{type:'tf',q:'Multiple printers default.',a:true},
+{type:'tf',q:'Linux open source.',a:true},
+{type:'tf',q:'Ctrl+Z redo.',a:false}
+];
+
+let index=1;
+let answers=new Array(questions.length);
+
+function buildPalette(){
+let p='';
+questions.forEach((q,i)=>{if(q.type!='section')p+=`<button id='p${i}' onclick='jump(${i})'>${i}</button>`});
+document.getElementById('palette').innerHTML=p;
+}
+
+function loadQ(){
+let q=questions[index];
+if(q.type=='section'){index++; loadQ(); return}
+let html=`<h3>Q${index}. ${q.q}</h3>`;
+if(q.type=='mcq'){
+q.o.forEach((op,i)=>html+=`<label class='option'><input type='radio' name='opt' value='${i}'> ${op}</label>`);
+}else{
+html+=`<label class='option'><input type='radio' name='opt' value='true'> True</label>
+<label class='option'><input type='radio' name='opt' value='false'> False</label>`;
+}
+document.getElementById('qbox').innerHTML=html;
+}
+
+function save(){
+let s=document.querySelector("input[name=opt]:checked");
+if(s){answers[index]=s.value;document.getElementById('p'+index)?.classList.add('answered');}
+}
+
+function nextQ(){save(); if(index<questions.length-1){index++; loadQ();}}
+function prevQ(){save(); if(index>1){index--; loadQ();}}
+function jump(i){save(); index=i; loadQ();}
+
+function submitQuiz(){
+save();
+let score=0,correct=0,wrong=0;
+questions.forEach((q,i)=>{
+if(q.type=='mcq'){
+if(Number(answers[i])===q.a){score+=1; correct++;}
+else if(answers[i]!=null){score-=0.25; wrong++;}
+}
+if(q.type=='tf'){
+if(answers[i]==q.a?.toString()){score+=1; correct++;}
+else if(answers[i]!=null){score-=0.25; wrong++;}
+}
+});
+
+document.getElementById('result').style.display='block';
+document.getElementById('rname').innerText='Student: '+document.getElementById('sname').value;
+document.getElementById('rscore').innerText='Score: '+score.toFixed(2);
+
+new Chart(document.getElementById('chart'),{type:'pie',data:{labels:['Correct','Wrong'],datasets:[{data:[correct,wrong]}]}});
+}
+
+buildPalette();
+loadQ();
+</script>
+</body>
+</html>

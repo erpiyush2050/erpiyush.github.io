@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>CBT FINAL UPDATED</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{font-family:Arial;background:#eef2f7}
+.container{width:90%;margin:auto;display:flex;gap:20px}
+.exam{flex:3;background:white;padding:20px;border-radius:12px}
+.paletteBox{flex:1;background:white;padding:15px;border-radius:12px;height:85vh;overflow:auto}
+
+.palette button{width:40px;margin:4px;padding:6px;border:none;border-radius:6px}
+.answered{background:#28a745;color:white}
+.notanswered{background:#ccc}
+.current{border:2px solid black}
+
+.controls{margin-top:20px}
+.controls button{padding:10px;margin:6px;border:none;border-radius:6px;color:white}
+.prev{background:#007bff}
+.next{background:#28a745}
+.clear{background:#ffc107;color:black}
+.submit{background:#dc3545}
+
+.dashboard{display:none;width:85%;margin:20px auto;background:white;padding:25px;border-radius:12px}
+
+.correctQ{background:#d4edda}
+.wrongQ{background:#f8d7da}
+.unQ{background:#fff3cd}
+</style>
+</head>
+
+<body>
+
+<h2 style="text-align:center;">CBT Exam <span id="timer"></span></h2>
+
+<div class="container" id="examSection">
+
+<div class="exam">
+<div id="q"></div>
+<div id="opt"></div>
+
+<div class="controls">
+<button class="prev" onclick="prev()">Prev</button>
+<button class="next" onclick="next()">Next</button>
+<button class="clear" onclick="clearAns()">Clear</button>
+<button class="submit" onclick="submitExam()">Submit</button>
+</div>
+</div>
+
+<div class="paletteBox">
+<div id="palette"></div>
+</div>
+
+</div>
+
+<div class="dashboard" id="dashboard">
+
+<h2>📊 Result Dashboard</h2>
+<div id="summary"></div>
+
+<button onclick="downloadPDF()">📑 Download PDF</button>
+
+<canvas id="chart"></canvas>
+
+<h3>Section Analysis</h3>
+<div id="section"></div>
+
+<h3>All Questions with Answers</h3>
+<div id="reviewBox"></div>
+
+</div>
+
+<script>
+
+/* 🔥 PASTE YOUR SAME 150 QUESTIONS HERE */
+
+const questions = [
+
+/* ===== WRITER (1–50) ===== */
+
+{q:"Writer is used for?",options:["Spreadsheet","Word Processing","Presentation","Database"],correct:1,topic:"Writer",solution:"Word processing"},
+{q:"Default extension of Writer?",options:[".odt",".doc",".xls",".ppt"],correct:0,topic:"Writer",solution:".odt"},
+{q:"Shortcut to save?",options:["Ctrl+S","Ctrl+P","Ctrl+O","Ctrl+N"],correct:0,topic:"Shortcut",solution:"Save"},
+{q:"Shortcut to open?",options:["Ctrl+O","Ctrl+S","Ctrl+N","Ctrl+P"],correct:0,topic:"Shortcut",solution:"Open"},
+{q:"Bold shortcut?",options:["Ctrl+B","Ctrl+I","Ctrl+U","Ctrl+L"],correct:0,topic:"Shortcut",solution:"Bold"},
+{q:"Italic shortcut?",options:["Ctrl+I","Ctrl+B","Ctrl+U","Ctrl+P"],correct:0,topic:"Shortcut",solution:"Italic"},
+{q:"Underline shortcut?",options:["Ctrl+U","Ctrl+B","Ctrl+I","Ctrl+E"],correct:0,topic:"Shortcut",solution:"Underline"},
+{q:"Header is placed at?",options:["Top","Bottom","Left","Right"],correct:0,topic:"Writer",solution:"Top"},
+{q:"Footer is placed at?",options:["Bottom","Top","Left","Right"],correct:0,topic:"Writer",solution:"Bottom"},
+{q:"Spell Check is used for?",options:["Correct spelling","Delete","Insert","Format"],correct:0,topic:"Writer",solution:"Correction"},
+
+{q:"Find shortcut?",options:["Ctrl+F","Ctrl+H","Ctrl+G","Ctrl+R"],correct:0,topic:"Writer",solution:"Find"},
+{q:"Replace shortcut?",options:["Ctrl+H","Ctrl+F","Ctrl+R","Ctrl+Shift"],correct:0,topic:"Writer",solution:"Replace"},
+{q:"Mail merge is used for?",options:["Bulk letters","Formatting","Charts","Tables"],correct:0,topic:"Writer",solution:"Bulk letters"},
+{q:"Bookmark is used for?",options:["Navigation","Delete","Insert","Print"],correct:0,topic:"Writer",solution:"Navigation"},
+{q:"Hyperlink connects to?",options:["Web/File","Delete","Insert","Print"],correct:0,topic:"Writer",solution:"Link"},
+{q:"Shortcut for hyperlink?",options:["Ctrl+K","Ctrl+H","Ctrl+L","Ctrl+Shift"],correct:0,topic:"Shortcut",solution:"Ctrl+K"},
+{q:"Table consists of?",options:["Rows & Columns","Pages","Images","Charts"],correct:0,topic:"Writer",solution:"Structure"},
+{q:"Borders are used for?",options:["Formatting","Delete","Insert","Print"],correct:0,topic:"Writer",solution:"Design"},
+{q:"Shading is used for?",options:["Background color","Delete","Insert","Print"],correct:0,topic:"Writer",solution:"Color"},
+{q:"Alignment includes?",options:["Left Right Center","Top Bottom","All","None"],correct:2,topic:"Writer",solution:"All"},
+
+{q:"Justify alignment means?",options:["Equal margins","Left only","Right only","Center"],correct:0,topic:"Writer",solution:"Equal"},
+{q:"Ctrl+Z is used for?",options:["Undo","Redo","Cut","Copy"],correct:0,topic:"Shortcut",solution:"Undo"},
+{q:"Ctrl+Y is used for?",options:["Redo","Undo","Cut","Copy"],correct:0,topic:"Shortcut",solution:"Redo"},
+{q:"Ctrl+C is used for?",options:["Copy","Paste","Cut","Undo"],correct:0,topic:"Shortcut",solution:"Copy"},
+{q:"Ctrl+V is used for?",options:["Paste","Copy","Cut","Undo"],correct:0,topic:"Shortcut",solution:"Paste"},
+{q:"Ctrl+X is used for?",options:["Cut","Copy","Paste","Undo"],correct:0,topic:"Shortcut",solution:"Cut"},
+{q:"Ctrl+N creates?",options:["New document","Open","Save","Print"],correct:0,topic:"Shortcut",solution:"New"},
+{q:"Page margins control?",options:["Page spacing","Font","Image","Table"],correct:0,topic:"Writer",solution:"Spacing"},
+{q:"Zoom option is used for?",options:["View size","Print","Delete","Insert"],correct:0,topic:"Writer",solution:"Zoom"},
+{q:"Print preview shows?",options:["Before print","Edit","Delete","Insert"],correct:0,topic:"Writer",solution:"Preview"},
+
+{q:"Header/Footer used for?",options:["Repeated text","Delete","Insert","Format"],correct:0,topic:"Writer",solution:"Repeat"},
+{q:"Font size controls?",options:["Text size","Page size","Image size","Table size"],correct:0,topic:"Writer",solution:"Text"},
+{q:"Paragraph spacing affects?",options:["Space between paragraphs","Font","Table","Image"],correct:0,topic:"Writer",solution:"Spacing"},
+{q:"Line spacing controls?",options:["Space between lines","Font","Margins","Header"],correct:0,topic:"Writer",solution:"Lines"},
+{q:"Save As is used for?",options:["Save new copy","Delete","Insert","Print"],correct:0,topic:"Writer",solution:"New copy"},
+{q:"PDF export is used for?",options:["Sharing","Editing","Deleting","Formatting"],correct:0,topic:"Writer",solution:"Share"},
+{q:"Table insertion is done using?",options:["Insert menu","Edit","View","File"],correct:0,topic:"Writer",solution:"Insert"},
+{q:"Spell check identifies?",options:["Errors","Images","Tables","Charts"],correct:0,topic:"Writer",solution:"Errors"},
+{q:"Find and replace helps in?",options:["Editing","Printing","Saving","Deleting"],correct:0,topic:"Writer",solution:"Edit"},
+{q:"Mail merge combines?",options:["Data + Document","Text + Image","Chart + Table","None"],correct:0,topic:"Writer",solution:"Combine"},
+
+{q:"Labels are created using?",options:["Mail merge","Chart","Table","Filter"],correct:0,topic:"Writer",solution:"Labels"},
+{q:"Multiple letters are created using?",options:["Mail merge","Filter","Sort","Chart"],correct:0,topic:"Writer",solution:"Bulk letters"},
+{q:"Find option is used for?",options:["Search text","Delete","Insert","Format"],correct:0,topic:"Writer",solution:"Search"},
+{q:"Replace option is used for?",options:["Replace text","Delete","Insert","Print"],correct:0,topic:"Writer",solution:"Replace"},
+{q:"Document creation means?",options:["New file","Delete","Insert","Print"],correct:0,topic:"Writer",solution:"Create"},
+{q:"Text formatting includes?",options:["Bold Italic","Sorting","Filtering","Chart"],correct:0,topic:"Writer",solution:"Format"},
+{q:"Opening document means?",options:["Load file","Delete","Insert","Print"],correct:0,topic:"Writer",solution:"Open"},
+{q:"Printing document means?",options:["Hard copy","Soft copy","Delete","Insert"],correct:0,topic:"Writer",solution:"Print"},
+{q:"Saving document means?",options:["Store file","Delete","Insert","Print"],correct:0,topic:"Writer",solution:"Save"},
+
+/* ===== CALC (51–120) ===== */
+
+,{q:"Calc is used for?",options:["Calculation","Text","Drawing","Mail"],correct:0,topic:"Calc",solution:"Spreadsheet"},
+{q:"Formula starts with?",options:["=","#","$","@"],correct:0,topic:"Calc",solution:"="},
+{q:"Cell A1 means?",options:["Column A Row 1","Row A Column 1","Both","None"],correct:0,topic:"Calc",solution:"Correct"},
+{q:"Range A1:A10 means?",options:["Cells from A1 to A10","Single cell","Row only","Column only"],correct:0,topic:"Calc",solution:"Range"},
+{q:"SUM function is used to?",options:["Add numbers","Subtract","Multiply","Divide"],correct:0,topic:"Calc",solution:"Addition"},
+{q:"AVERAGE function calculates?",options:["Mean","Sum","Max","Min"],correct:0,topic:"Calc",solution:"Average"},
+{q:"MAX function returns?",options:["Largest value","Smallest","Average","Sum"],correct:0,topic:"Calc",solution:"Maximum"},
+{q:"MIN function returns?",options:["Smallest value","Largest","Average","Sum"],correct:0,topic:"Calc",solution:"Minimum"},
+{q:"COUNT function counts?",options:["Numbers","Text","Both","None"],correct:0,topic:"Calc",solution:"Numbers"},
+{q:"COUNTA counts?",options:["Non-empty cells","Numbers only","Text only","None"],correct:0,topic:"Calc",solution:"All values"},
+
+{q:"Sorting means?",options:["Arrange data","Delete","Insert","Print"],correct:0,topic:"Calc",solution:"Arrange"},
+{q:"Ascending order means?",options:["Low to high","High to low","Random","None"],correct:0,topic:"Calc",solution:"Ascending"},
+{q:"Descending order means?",options:["High to low","Low to high","Random","None"],correct:0,topic:"Calc",solution:"Descending"},
+{q:"Filter is used for?",options:["Show selected data","Delete","Insert","Print"],correct:0,topic:"Calc",solution:"Filter"},
+{q:"AutoFilter provides?",options:["Quick filtering","Sorting","Delete","Insert"],correct:0,topic:"Calc",solution:"Quick filter"},
+{q:"Conditional formatting applies based on?",options:["Condition","Text","Image","Print"],correct:0,topic:"Calc",solution:"Condition"},
+{q:"Conditional formatting highlights?",options:["Cells","Rows","Columns","All"],correct:3,topic:"Calc",solution:"All"},
+{q:"Pivot table is used for?",options:["Summary","Delete","Insert","Print"],correct:0,topic:"Pivot",solution:"Summary"},
+{q:"Pivot table handles?",options:["Large data","Small data","None","Text"],correct:0,topic:"Pivot",solution:"Large data"},
+{q:"Pivot table shows?",options:["Summary report","Raw data","Images","None"],correct:0,topic:"Pivot",solution:"Summary"},
+
+{q:"VLOOKUP searches?",options:["Vertical","Horizontal","Both","None"],correct:0,topic:"Lookup",solution:"Vertical"},
+{q:"HLOOKUP searches?",options:["Horizontal","Vertical","Both","None"],correct:0,topic:"Lookup",solution:"Horizontal"},
+{q:"XLOOKUP is?",options:["Advanced lookup","Old","Delete","Insert"],correct:0,topic:"Lookup",solution:"Modern"},
+{q:"VLOOKUP syntax includes?",options:["Value,Table,Col","Only value","Only table","None"],correct:0,topic:"Lookup",solution:"Full syntax"},
+{q:"Lookup functions used for?",options:["Search data","Delete","Insert","Print"],correct:0,topic:"Lookup",solution:"Search"},
+
+{q:"IF function is used for?",options:["Condition check","Delete","Insert","Print"],correct:0,topic:"IF",solution:"Logical"},
+{q:"IF syntax requires?",options:["3 arguments","2 arguments","1 argument","4 arguments"],correct:0,topic:"IF",solution:"Condition,true,false"},
+{q:"AND function returns TRUE when?",options:["All true","Any","None","One"],correct:0,topic:"IF",solution:"All true"},
+{q:"OR function returns TRUE when?",options:["Any true","All","None","One"],correct:0,topic:"IF",solution:"Any true"},
+{q:"NOT function does?",options:["Reverse logic","Add","Delete","Insert"],correct:0,topic:"IF",solution:"Reverse"},
+
+{q:"LEFT function extracts?",options:["Left text","Right","Middle","All"],correct:0,topic:"Text",solution:"Left"},
+{q:"RIGHT function extracts?",options:["Right text","Left","Middle","All"],correct:0,topic:"Text",solution:"Right"},
+{q:"MID function extracts?",options:["Middle text","Left","Right","All"],correct:0,topic:"Text",solution:"Middle"},
+{q:"LEN function returns?",options:["Length","Text","Number","Sum"],correct:0,topic:"Text",solution:"Length"},
+{q:"UPPER function converts?",options:["Uppercase","Lowercase","Number","Date"],correct:0,topic:"Text",solution:"Uppercase"},
+{q:"LOWER function converts?",options:["Lowercase","Uppercase","Number","Date"],correct:0,topic:"Text",solution:"Lowercase"},
+{q:"REPT function does?",options:["Repeat text","Delete","Insert","Print"],correct:0,topic:"Text",solution:"Repeat"},
+{q:"CONCAT function does?",options:["Join text","Split","Delete","Insert"],correct:0,topic:"Text",solution:"Join"},
+
+{q:"TODAY() returns?",options:["Current date","Time","Year","Month"],correct:0,topic:"Date",solution:"Date"},
+{q:"NOW() returns?",options:["Date & Time","Date","Time","Year"],correct:0,topic:"Date",solution:"Date+time"},
+{q:"YEAR() extracts?",options:["Year","Month","Day","Time"],correct:0,topic:"Date",solution:"Year"},
+{q:"MONTH() extracts?",options:["Year","Month","Day","Time"],correct:1,topic:"Date",solution:"Month"},
+{q:"DAY() extracts?",options:["Year","Month","Day","Time"],correct:2,topic:"Date",solution:"Day"},
+{q:"DATEDIF calculates?",options:["Difference","Sum","Count","Avg"],correct:0,topic:"Date",solution:"Difference"},
+
+{q:"Absolute reference uses?",options:["$ sign","%","#","@"],correct:0,topic:"Calc",solution:"$"},
+{q:"Relative reference changes?",options:["With position","Fixed","None","All"],correct:0,topic:"Calc",solution:"Relative"},
+{q:"Formula bar shows?",options:["Formula","Chart","Image","Text"],correct:0,topic:"Calc",solution:"Formula"},
+{q:"Name box shows?",options:["Cell address","Formula","Chart","Image"],correct:0,topic:"Calc",solution:"Cell address"},
+{q:"Worksheet contains?",options:["Cells","Pages","Charts","Images"],correct:0,topic:"Calc",solution:"Cells"},
+{q:"Workbook contains?",options:["Multiple sheets","Single sheet","Chart","Text"],correct:0,topic:"Calc",solution:"Sheets"},
+{q:"Insert row is used to?",options:["Add row","Delete row","Print","Save"],correct:0,topic:"Calc",solution:"Insert"},
+{q:"Delete column removes?",options:["Column","Row","Cell","Sheet"],correct:0,topic:"Calc",solution:"Delete"},
+{q:"Chart represents?",options:["Data visually","Text","Image","None"],correct:0,topic:"Calc",solution:"Visual"},
+{q:"Pie chart shows?",options:["Parts of whole","Lines","Bars","Text"],correct:0,topic:"Calc",solution:"Parts"}
+/* ===== MIXED (121–150) ===== */
+
+,{q:"RAM is?",options:["Temporary memory","Permanent","External","None"],correct:0,topic:"Memory",solution:"Volatile"},
+{q:"ROM is?",options:["Permanent memory","Temporary","External","None"],correct:0,topic:"Memory",solution:"Non-volatile"},
+{q:"Cache memory is?",options:["Very fast","Slow","External","None"],correct:0,topic:"Memory",solution:"Fast"},
+{q:"Hard disk is?",options:["Secondary memory","Primary","Cache","RAM"],correct:0,topic:"Memory",solution:"Secondary"},
+{q:"Pen drive is?",options:["Secondary storage","Primary","Cache","RAM"],correct:0,topic:"Memory",solution:"External"},
+
+{q:"Operating system is?",options:["System software","Application","Utility","None"],correct:0,topic:"Software",solution:"OS"},
+{q:"Writer is?",options:["Application","System","Utility","None"],correct:0,topic:"Software",solution:"Application"},
+{q:"Calc is?",options:["Application","System","Utility","None"],correct:0,topic:"Software",solution:"Application"},
+{q:"Antivirus is?",options:["Utility software","System","Application","None"],correct:0,topic:"Software",solution:"Utility"},
+{q:"Windows is?",options:["Operating system","Application","Utility","None"],correct:0,topic:"Software",solution:"OS"},
+
+{q:"CPU stands for?",options:["Central Processing Unit","Computer Processing Unit","Control Unit","None"],correct:0,topic:"Basics",solution:"CPU"},
+{q:"ALU performs?",options:["Arithmetic & logic","Storage","Input","Output"],correct:0,topic:"Basics",solution:"ALU"},
+{q:"CU stands for?",options:["Control Unit","Central Unit","Computer Unit","None"],correct:0,topic:"Basics",solution:"CU"},
+{q:"Input device example?",options:["Keyboard","Monitor","Printer","Speaker"],correct:0,topic:"Basics",solution:"Input"},
+{q:"Output device example?",options:["Monitor","Keyboard","Mouse","Scanner"],correct:0,topic:"Basics",solution:"Output"},
+
+{q:"Spreadsheet is used for?",options:["Data analysis","Typing","Drawing","Mail"],correct:0,topic:"Calc",solution:"Analysis"},
+{q:"Word processor is used for?",options:["Text editing","Calculation","Drawing","Mail"],correct:0,topic:"Writer",solution:"Text"},
+{q:"Chart is used for?",options:["Visual representation","Typing","Delete","Insert"],correct:0,topic:"Calc",solution:"Visual"},
+{q:"Filter hides data?",options:["True","False"],correct:0,topic:"Calc",solution:"Hide non-matching"},
+{q:"Sorting arranges data?",options:["True","False"],correct:0,topic:"Calc",solution:"Arrange"},
+
+{q:"SUM adds numbers?",options:["True","False"],correct:0,topic:"Calc",solution:"True"},
+{q:"AVERAGE finds mean?",options:["True","False"],correct:0,topic:"Calc",solution:"True"},
+{q:"IF is logical function?",options:["True","False"],correct:0,topic:"IF",solution:"True"},
+{q:"VLOOKUP works vertically?",options:["True","False"],correct:0,topic:"Lookup",solution:"True"},
+{q:"HLOOKUP works horizontally?",options:["True","False"],correct:0,topic:"Lookup",solution:"True"},
+
+{q:"Mail merge creates multiple documents?",options:["True","False"],correct:0,topic:"Writer",solution:"True"},
+{q:"Hyperlink connects to web?",options:["True","False"],correct:0,topic:"Writer",solution:"True"},
+{q:"Bookmark marks location?",options:["True","False"],correct:0,topic:"Writer",solution:"True"},
+{q:"Conditional formatting depends on condition?",options:["True","False"],correct:0,topic:"Calc",solution:"True"},
+{q:"Pivot table summarizes data?",options:["True","False"],correct:0,topic:"Pivot",solution:"True"}
+
+
+,{q:"Dot matrix printer is?",options:["Impact printer","Non-impact","Laser","Inkjet"],correct:0}
+,{q:"Laser printer uses?",options:["Laser technology","Ink","Pins","Ribbon"],correct:0}
+,{q:"Hard disk is?",options:["Secondary storage","Primary","Cache","RAM"],correct:0}
+,{q:"SSD is?",options:["Solid state storage","RAM","Cache","CPU"],correct:0}
+,{q:"Keyboard is?",options:["Input device","Output device","Storage","Software"],correct:0}
+,{q:"Monitor is?",options:["Output device","Input","Storage","Software"],correct:0}
+,{q:"Mouse is?",options:["Input device","Output","Storage","None"],correct:0}
+,{q:"Printer is?",options:["Output device","Input","Storage","None"],correct:0}
+,{q:"Browser example?",options:["Chrome","Windows","Linux","CPU"],correct:0}
+,{q:"System software example?",options:["Operating system","MS Word","Chrome","Excel"],correct:0}
+,{q:"Application software example?",options:["MS Word","Windows","Linux","BIOS"],correct:0}
+,{q:"Mobile software example?",options:["Android","CPU","RAM","Hard disk"],correct:0}
+,{q:"Firmware is?",options:["Software in ROM","Application","Virus","None"],correct:0}
+,{q:"Virus full form?",options:["Vital Information Resource Under Siege","None","Virtual Info","System virus"],correct:0}
+,{q:"Phishing is?",options:["Fraud attack","Virus","Hardware","Software"],correct:0}
+,{q:"First generation used?",options:["Vacuum tubes","Transistors","IC","Microprocessor"],correct:0}
+,{q:"Third generation used?",options:["Integrated Circuits","Vacuum","Transistor","AI"],correct:0}
+
+];
+
+
+let i=0;
+let ans=new Array(questions.length).fill(null);
+
+// TIMER
+let time=3600;
+let warned=false;
+
+let t=setInterval(()=>{
+let m=Math.floor(time/60);
+let s=time%60;
+document.getElementById("timer").innerText=m+":"+(s<10?"0"+s:s);
+
+if(time==300 && !warned){
+alert("⚠ Only 5 minutes left!");
+warned=true;
+}
+
+time--;
+if(time<=0) submitExam();
+},1000);
+
+// LOAD
+function load(){
+let q=questions[i];
+document.getElementById("q").innerHTML="<h3>Q"+(i+1)+": "+q.q+"</h3>";
+
+let h="";
+q.options.forEach((o,idx)=>{
+let c=ans[i]===idx?"checked":"";
+h+=`<label><input type="radio" name="q${i}" ${c} onchange="save(${idx})"> ${o}</label><br>`;
+});
+document.getElementById("opt").innerHTML=h;
+update();
+}
+
+function save(x){ans[i]=x;update();}
+function next(){if(i<questions.length-1){i++;load();}}
+function prev(){if(i>0){i--;load();}}
+function clearAns(){ans[i]=null;load();}
+
+// PALETTE
+function palette(){
+let h="";
+for(let j=0;j<questions.length;j++){
+h+=`<button id="p${j}" onclick="jump(${j})">${j+1}</button>`;
+}
+document.getElementById("palette").innerHTML=h;
+}
+
+function update(){
+for(let j=0;j<questions.length;j++){
+let b=document.getElementById("p"+j);
+if(!b) continue;
+b.className="";
+if(ans[j]!=null) b.classList.add("answered");
+else b.classList.add("notanswered");
+if(j===i) b.classList.add("current");
+}
+}
+
+function jump(x){i=x;load();}
+
+// SUBMIT
+function submitExam(){
+clearInterval(t);
+
+document.getElementById("examSection").style.display="none";
+document.getElementById("dashboard").style.display="block";
+
+let c=0,w=0,u=0;
+
+questions.forEach((q,idx)=>{
+if(ans[idx]==null)u++;
+else if(ans[idx]==q.correct)c++;
+else w++;
+});
+
+let total=questions.length;
+let attempted=total-u;
+
+let percent=((c/total)*100).toFixed(2);
+let accuracy=((c/attempted)*100 || 0).toFixed(2);
+
+let grade="Fail";
+if(percent>=75) grade="A";
+else if(percent>=50) grade="B";
+else if(percent>=33) grade="C";
+
+document.getElementById("summary").innerHTML=
+`
+Correct: ${c}<br>
+Wrong: ${w}<br>
+Unattempted: ${u}<br>
+Percentage: ${percent}%<br>
+Accuracy: ${accuracy}%<br>
+Grade: ${grade}
+`;
+
+new Chart(document.getElementById("chart"),{
+type:'pie',
+data:{labels:["Correct","Wrong","Unattempt"],datasets:[{data:[c,w,u]}]}
+});
+
+// SECTION ANALYSIS
+let writer=0, calc=0, mixed=0;
+
+questions.forEach((q,idx)=>{
+if(idx<50) writer+=ans[idx]==q.correct?1:0;
+else if(idx<120) calc+=ans[idx]==q.correct?1:0;
+else mixed+=ans[idx]==q.correct?1:0;
+});
+
+document.getElementById("section").innerHTML=
+`
+Writer: ${writer}<br>
+Calc: ${calc}<br>
+Mixed: ${mixed}
+`;
+
+// REVIEW ALL QUESTIONS
+let html="";
+questions.forEach((q,i)=>{
+let cls="";
+if(ans[i]==null) cls="unQ";
+else if(ans[i]==q.correct) cls="correctQ";
+else cls="wrongQ";
+
+html+=`<div class="${cls}" style="padding:12px;margin:10px 0">
+<b>Q${i+1}: ${q.q}</b><br>`;
+
+q.options.forEach((opt,idx)=>{
+let style="";
+if(idx==q.correct) style="color:green;font-weight:bold";
+if(ans[i]==idx && idx!=q.correct) style="color:red";
+html+=`<p style="${style}">${opt}</p>`;
+});
+
+html+="</div>";
+});
+
+document.getElementById("reviewBox").innerHTML=html;
+}
+
+// PDF
+function downloadPDF(){
+let w=window.open("");
+w.document.write(document.getElementById("dashboard").innerHTML);
+w.print();
+}
+
+palette();
+load();
+
+</script>
+
+</body>
+</html>
