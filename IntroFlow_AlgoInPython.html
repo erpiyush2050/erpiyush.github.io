@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>O level - CBT Exam</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body { margin:0; font-family:Arial; background:#f4f6f8; }
+
+/* LOGIN */
+.login-container{
+height:100vh; display:flex; justify-content:center; align-items:center;
+background:linear-gradient(135deg,#007bff,#00c6ff);
+}
+.login-box{
+background:white; padding:40px; border-radius:15px; width:300px;
+box-shadow:0 10px 25px rgba(0,0,0,0.2); text-align:center;
+}
+
+/* HEADER */
+.header {background:#1a73e8;color:white;padding:15px;display:flex;justify-content:space-between;}
+
+.container { display:flex; height:85vh; }
+.left { width:20%; background:#fff; padding:10px; overflow:auto; }
+.right { width:80%; padding:20px; }
+
+.option {
+display:block;padding:12px;margin:8px 0;background:#eee;border-radius:8px;cursor:pointer;
+}
+
+.btn{
+padding:10px 18px;border:none;border-radius:8px;color:white;font-weight:bold;cursor:pointer;margin:5px;
+}
+.blue{ background:#007bff; }
+.green{ background:#28a745; }
+.yellow{ background:#ffc107; color:black; }
+.red{ background:#dc3545; }
+
+.palette-btn {width:40px;height:40px;margin:5px;border:none;border-radius:6px;}
+
+/* RESULT */
+.result-card{background:white;padding:25px;border-radius:15px;max-width:1200px;margin:20px auto;}
+.score-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;}
+.score-box{background:#f8f9fc;padding:15px;border-radius:10px;text-align:center;}
+.chart-container{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;}
+.chart-box{ height:300px; }
+
+.review-box{padding:12px;margin:10px 0;border-radius:8px;}
+.correct-bg{ background:#d4edda; }
+.wrong-bg{ background:#f8d7da; }
+.unattempted-bg{ background:#fff3cd; }
+
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="login-container">
+<div class="login-box">
+<h2>O Level - CBT Login</h2>
+<input id="user" placeholder="Enter Name"><br><br>
+<input id="pass" placeholder="Enter Mobile"><br><br>
+<button class="btn blue" onclick="loginUser()">Start Exam</button>
+<p id="loginMsg"></p>
+</div>
+</div>
+
+<!-- EXAM -->
+<div id="exam" style="display:none;">
+<div class="header">
+<div>O level - CBT Examination Portal</div>
+<div id="timer"></div>
+</div>
+
+<div class="container">
+<div class="left"><div id="palette"></div></div>
+
+<div class="right">
+<h4 id="counter"></h4>
+<h3 id="question"></h3>
+<div id="options"></div>
+
+<div>
+<button class="btn blue" onclick="prev()">Prev</button>
+<button class="btn green" onclick="saveAndNext()">Next</button>
+<button class="btn yellow" onclick="markReview()">Mark Review</button>
+<button class="btn yellow" onclick="clearAnswer()">Clear</button>
+<button class="btn red" onclick="confirmSubmit()">Submit</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- RESULT -->
+<div id="result" style="display:none;">
+<div class="header">
+<div>📊 Result Dashboard</div>
+<button class="btn green" onclick="downloadPDF()">Download PDF</button>
+</div>
+
+<div id="resultContent" class="result-card">
+
+<div class="score-grid">
+<div class="score-box">Total<br><b id="tTotal"></b></div>
+<div class="score-box">Correct<br><b id="tCorrect"></b></div>
+<div class="score-box">Wrong<br><b id="tWrong"></b></div>
+<div class="score-box">Not Attempted<br><b id="tUnattempted"></b></div>
+<div class="score-box">Score<br><b id="tScore"></b></div>
+</div>
+
+<div class="chart-container">
+<div class="chart-box"><canvas id="pieChart"></canvas></div>
+<div class="chart-box"><canvas id="barChart"></canvas></div>
+</div>
+
+<h3>📝 Question Review</h3>
+<div id="review"></div>
+
+</div>
+</div>
+
+<script>
+
+/* ✅ FIXED QUESTIONS */
+const questions = [
+{q:"What is programming?", options:["Writing instructions for computer","Designing hardware","Using internet","Typing text"], ans:0},
+{q:"A program is?", options:["Set of instructions","Hardware","Device","Memory"], ans:0},
+{q:"Which language is closest to machine?", options:["High level","Assembly","Machine language","Python"], ans:2},
+{q:"Machine language uses?", options:["English","Binary","Symbols","Flowchart"], ans:1},
+{q:"Which is high level language?", options:["C","Binary","Assembly","Machine"], ans:0},
+
+{q:"Translator converts?", options:["Hardware to software","Language to machine code","Program to flowchart","Input to output"], ans:1},
+{q:"Compiler translates?", options:["Line by line","Whole program","Only input","Only output"], ans:1},
+{q:"Interpreter translates?", options:["Whole program","Line by line","None","Machine code"], ans:1},
+{q:"Which is low level language?", options:["Python","C","Assembly","Java"], ans:2},
+{q:"What is debugging?", options:["Finding errors","Writing code","Running program","Designing flowchart"], ans:0},
+
+{q:"First generation language is?", options:["Assembly","Machine language","C","Java"], ans:1},
+{q:"Second generation language is?", options:["Machine","Assembly","Python","Java"], ans:1},
+{q:"Third generation language example?", options:["C","Binary","Assembly","Machine"], ans:0},
+{q:"Which is 4GL?", options:["SQL","Assembly","Binary","Machine"], ans:0},
+{q:"Which is 5GL?", options:["AI based","Assembly","C","Binary"], ans:0},
+
+{q:"Programming language evolution started with?", options:["Machine language","Python","C++","Java"], ans:0},
+{q:"High level languages are?", options:["User friendly","Binary only","Hardware based","None"], ans:0},
+{q:"Which is advantage of high level language?", options:["Easy to understand","Fastest","Binary","None"], ans:0},
+{q:"Which is disadvantage of machine language?", options:["Complex","Easy","Portable","Readable"], ans:0},
+{q:"Assembly language uses?", options:["Mnemonic codes","Binary only","English","Flowchart"], ans:0},
+
+{q:"Algorithm is?", options:["Step by step solution","Program","Hardware","Flowchart"], ans:0},
+{q:"Algorithm should be?", options:["Finite","Infinite","Random","None"], ans:0},
+{q:"Algorithm must have?", options:["Input","Output","Steps","All"], ans:3},
+{q:"Flowchart is?", options:["Graphical representation","Program","Device","Language"], ans:0},
+{q:"Flowchart uses?", options:["Symbols","Text only","Binary","Code"], ans:0},
+
+{q:"Start/Stop symbol shape?", options:["Oval","Rectangle","Diamond","Circle"], ans:0},
+{q:"Process symbol shape?", options:["Rectangle","Oval","Diamond","Circle"], ans:0},
+{q:"Decision symbol shape?", options:["Diamond","Rectangle","Oval","Circle"], ans:0},
+{q:"Input/Output symbol?", options:["Parallelogram","Circle","Oval","Diamond"], ans:0},
+{q:"Flow lines represent?", options:["Direction","Error","Loop","None"], ans:0},
+
+{q:"Algorithm is written in?", options:["Simple language","Binary","Machine code","Assembly"], ans:0},
+{q:"Flowchart helps in?", options:["Understanding logic","Typing","Hardware","None"], ans:0},
+{q:"Which comes first?", options:["Algorithm","Coding","Execution","Debugging"], ans:0},
+{q:"Flowchart is useful for?", options:["Planning","Execution","Typing","None"], ans:0},
+{q:"Algorithm is independent of?", options:["Language","Logic","Steps","Output"], ans:0},
+
+{q:"Which is not property of algorithm?", options:["Infinite","Finite","Clear","Correct"], ans:0},
+{q:"Which is step of problem solving?", options:["Analysis","Design","Coding","All"], ans:3},
+{q:"Flowchart improves?", options:["Clarity","Confusion","Error","None"], ans:0},
+{q:"Which is symbol for decision?", options:["Diamond","Circle","Rectangle","Oval"], ans:0},
+{q:"Loop in flowchart is shown by?", options:["Arrow","Diamond","Rectangle","Oval"], ans:0},
+
+{q:"Algorithm ends with?", options:["Stop","Start","Loop","Decision"], ans:0},
+{q:"Flowchart starts with?", options:["Start","Stop","Process","Decision"], ans:0},
+{q:"Which is example of input?", options:["Keyboard","Monitor","CPU","Printer"], ans:0},
+{q:"Which is example of output?", options:["Printer","Keyboard","Mouse","RAM"], ans:0},
+{q:"Which step converts algorithm to code?", options:["Coding","Execution","Testing","Analysis"], ans:0},
+
+{q:"Which is error type?", options:["Syntax","Logical","Runtime","All"], ans:3},
+{q:"Syntax error occurs due to?", options:["Wrong grammar","Logic","Input","Output"], ans:0},
+{q:"Logical error affects?", options:["Output","Syntax","Compiler","None"], ans:0},
+{q:"Runtime error occurs during?", options:["Execution","Coding","Design","Planning"], ans:0},
+{q:"Testing is used for?", options:["Finding errors","Writing code","Designing","None"], ans:0},
+
+{q:"What is the first step in problem solving?", options:["Analysis","Coding","Execution","Testing"], ans:0},
+{q:"Which step comes after algorithm?", options:["Flowchart","Coding","Testing","Execution"], ans:1},
+{q:"Algorithm must be?", options:["Clear and finite","Complex","Random","Infinite"], ans:0},
+{q:"Flowchart helps in?", options:["Understanding program logic","Compiling code","Execution","Typing"], ans:0},
+{q:"Which is correct sequence?", options:["Analysis→Algorithm→Flowchart→Coding","Coding→Algorithm→Flowchart","Flowchart→Coding→Analysis","Algorithm→Coding→Analysis"], ans:0},
+
+{q:"Which symbol is used for input?", options:["Parallelogram","Rectangle","Diamond","Oval"], ans:0},
+{q:"Which symbol is used for processing?", options:["Rectangle","Oval","Diamond","Circle"], ans:0},
+{q:"Decision making uses?", options:["Diamond","Rectangle","Oval","Circle"], ans:0},
+{q:"Flow lines show?", options:["Direction of flow","Error","Loop","None"], ans:0},
+{q:"Connector symbol is used for?", options:["Joining flow lines","Decision","Input","Output"], ans:0},
+
+{q:"Algorithm should produce?", options:["Output","Error","Loop","None"], ans:0},
+{q:"Which is not part of algorithm?", options:["Infinite steps","Input","Output","Processing"], ans:0},
+{q:"Flowchart uses arrows for?", options:["Flow direction","Error","Input","Output"], ans:0},
+{q:"Which is advantage of flowchart?", options:["Easy debugging","Complex design","Hard to understand","None"], ans:0},
+{q:"Algorithm is written before?", options:["Coding","Execution","Testing","Debugging"], ans:0},
+
+{q:"Which language is machine dependent?", options:["Machine language","Python","Java","C++"], ans:0},
+{q:"Assembly language uses?", options:["Mnemonics","Binary","English","Flowchart"], ans:0},
+{q:"Which is translator?", options:["Compiler","Interpreter","Assembler","All"], ans:3},
+{q:"Compiler gives error after?", options:["Whole program","Each line","Execution","None"], ans:0},
+{q:"Interpreter executes?", options:["Line by line","Whole program","None","Binary"], ans:0},
+
+{q:"Which is example of high level language?", options:["Python","Machine","Binary","Assembly"], ans:0},
+{q:"High level language is?", options:["Portable","Machine dependent","Binary only","None"], ans:0},
+{q:"Machine language is difficult because?", options:["Binary code","English","Symbols","Flowchart"], ans:0},
+{q:"Which generation uses AI?", options:["5GL","3GL","2GL","1GL"], ans:0},
+{q:"Which generation uses SQL?", options:["4GL","2GL","1GL","Machine"], ans:0},
+
+{q:"What is pseudocode?", options:["Algorithm in simple language","Machine code","Binary","Flowchart"], ans:0},
+{q:"Pseudocode helps in?", options:["Understanding logic","Execution","Compilation","None"], ans:0},
+{q:"Which is not flowchart symbol?", options:["Triangle","Oval","Diamond","Rectangle"], ans:0},
+{q:"Which is used for loop in flowchart?", options:["Arrow/Decision","Rectangle","Oval","Circle"], ans:0},
+{q:"Which symbol represents start?", options:["Oval","Rectangle","Diamond","Circle"], ans:0},
+
+{q:"Algorithm should terminate?", options:["Yes","No","Sometimes","Never"], ans:0},
+{q:"Flowchart is language dependent?", options:["No","Yes","Sometimes","None"], ans:0},
+{q:"Algorithm is language dependent?", options:["No","Yes","Sometimes","None"], ans:0},
+{q:"Which is easier to modify?", options:["Algorithm","Machine code","Binary","None"], ans:0},
+{q:"Which step finds errors?", options:["Testing","Coding","Design","Analysis"], ans:0},
+
+{q:"Which error is due to wrong logic?", options:["Logical error","Syntax error","Runtime error","None"], ans:0},
+{q:"Which error occurs at compile time?", options:["Syntax error","Logical error","Runtime error","None"], ans:0},
+{q:"Runtime error occurs during?", options:["Execution","Coding","Design","None"], ans:0},
+{q:"Debugging means?", options:["Removing errors","Adding errors","Execution","Design"], ans:0},
+{q:"Testing ensures?", options:["Correct output","Wrong output","Syntax","None"], ans:0},
+
+{q:"Algorithm must be unambiguous means?", options:["Clear","Complex","Infinite","None"], ans:0},
+{q:"Which is property of good algorithm?", options:["Finite steps","Infinite loop","No output","None"], ans:0},
+{q:"Flowchart helps in communication between?", options:["Programmers","Hardware","Devices","None"], ans:0},
+{q:"Which is input device?", options:["Keyboard","Printer","Monitor","Speaker"], ans:0},
+{q:"Which is output device?", options:["Monitor","Keyboard","Mouse","Scanner"], ans:0},
+
+{q:"Which is processing device?", options:["CPU","Keyboard","Monitor","Printer"], ans:0},
+{q:"Algorithm is step by step?", options:["Yes","No","Sometimes","None"], ans:0},
+{q:"Flowchart uses standard symbols?", options:["Yes","No","Sometimes","None"], ans:0},
+{q:"Which is best before coding?", options:["Algorithm","Execution","Testing","Debugging"], ans:0},
+{q:"Flowchart avoids?", options:["Confusion","Clarity","Logic","Steps"], ans:0},
+
+{q:"A flowchart always ends with?", options:["Stop","Start","Decision","Process"], ans:0},
+{q:"Which comes after coding?", options:["Testing","Algorithm","Analysis","Flowchart"], ans:0},
+{q:"Which step checks correctness?", options:["Testing","Coding","Design","Analysis"], ans:0},
+{q:"Algorithm helps to?", options:["Solve problem logically","Compile code","Execute program","None"], ans:0},
+{q:"Flowchart is useful for?", options:["Visualizing steps","Writing code","Execution","None"], ans:0},
+
+{q:"Which is not a benefit of algorithm?", options:["Direct execution","Clarity","Easy debugging","Planning"], ans:0},
+{q:"Which is not a benefit of flowchart?", options:["Direct execution","Visualization","Communication","Analysis"], ans:0},
+{q:"Algorithm must have output?", options:["Yes","No","Sometimes","None"], ans:0},
+{q:"Which step converts problem into steps?", options:["Algorithm","Execution","Testing","Debugging"], ans:0},
+{q:"Flowchart shows?", options:["Graphical logic","Binary code","Machine code","None"], ans:0},
+
+{q:"Which is example of decision?", options:["if-else","print","input","loop"], ans:0},
+{q:"Which is example of process?", options:["Calculation","Decision","Start","Stop"], ans:0},
+{q:"Which is example of input?", options:["Enter number","Display result","Calculate","Stop"], ans:0},
+{q:"Which is example of output?", options:["Display result","Input number","Calculate","Start"], ans:0},
+{q:"Which symbol used for decision?", options:["Diamond","Oval","Rectangle","Circle"], ans:0},
+
+{q:"Which symbol used for process?", options:["Rectangle","Diamond","Oval","Circle"], ans:0},
+{q:"Which symbol used for input/output?", options:["Parallelogram","Rectangle","Diamond","Circle"], ans:0},
+{q:"Which symbol used for start/stop?", options:["Oval","Rectangle","Diamond","Circle"], ans:0},
+{q:"Which symbol shows flow direction?", options:["Arrow","Diamond","Circle","Rectangle"], ans:0},
+{q:"Connector is used to?", options:["Link flow","Stop program","Input","Output"], ans:0},
+
+{q:"Algorithm is best written in?", options:["Simple language","Binary","Assembly","Machine"], ans:0},
+{q:"Flowchart is drawn using?", options:["Symbols","Text only","Binary","Code"], ans:0},
+{q:"Which is easier to understand?", options:["Flowchart","Machine code","Binary","Assembly"], ans:0},
+{q:"Which is closer to human language?", options:["High level","Machine","Binary","Assembly"], ans:0},
+{q:"Which is fastest language?", options:["Machine","Python","Java","C"], ans:0},
+
+{q:"Which is portable?", options:["High level","Machine","Assembly","Binary"], ans:0},
+{q:"Which is difficult to debug?", options:["Machine language","Python","Java","C"], ans:0},
+{q:"Which uses mnemonics?", options:["Assembly","Machine","Binary","Python"], ans:0},
+{q:"Which needs translator?", options:["High level","Machine","None","Binary"], ans:0},
+{q:"Which translator used for assembly?", options:["Assembler","Compiler","Interpreter","None"], ans:0},
+
+{q:"Compiler converts into?", options:["Machine code","Algorithm","Flowchart","Binary text"], ans:0},
+{q:"Interpreter works?", options:["Line by line","Whole program","None","Binary"], ans:0},
+{q:"Which is not translator?", options:["CPU","Compiler","Interpreter","Assembler"], ans:0},
+{q:"Which step removes errors?", options:["Debugging","Coding","Design","Analysis"], ans:0},
+{q:"Which step ensures logic?", options:["Algorithm","Execution","Testing","None"], ans:0},
+
+{q:"Algorithm should be finite?", options:["Yes","No","Sometimes","None"], ans:0},
+{q:"Algorithm should be clear?", options:["Yes","No","Sometimes","None"], ans:0},
+{q:"Flowchart reduces?", options:["Complexity","Logic","Steps","None"], ans:0},
+{q:"Which step gives final output?", options:["Execution","Coding","Analysis","Design"], ans:0},
+{q:"Which step is planning stage?", options:["Algorithm","Execution","Testing","Debugging"], ans:0},
+
+{q:"Which is example of logical error?", options:["Wrong output","Syntax mistake","Crash","None"], ans:0},
+{q:"Which is example of syntax error?", options:["Missing symbol","Wrong logic","Crash","None"], ans:0},
+{q:"Which is example of runtime error?", options:["Divide by zero","Missing bracket","Wrong logic","None"], ans:0},
+{q:"Which is example of algorithm?", options:["Step to add numbers","Code","Flowchart","Binary"], ans:0},
+{q:"Which is example of flowchart?", options:["Diagram of steps","Code","Binary","Text"], ans:0},
+
+{q:"Which improves understanding?", options:["Flowchart","Binary","Machine code","None"], ans:0},
+{q:"Which helps before coding?", options:["Algorithm","Execution","Testing","None"], ans:0},
+{q:"Which is structured approach?", options:["Algorithm","Random coding","Execution","None"], ans:0},
+{q:"Which ensures correct logic?", options:["Algorithm","Execution","Testing","None"], ans:0},
+{q:"Which is graphical tool?", options:["Flowchart","Algorithm","Code","Binary"], ans:0}
+]
+
+/* ADD SUBJECT */
+questions.forEach(q => q.subject="Programming");
+
+/* INIT */
+let index=0;
+let answers=new Array(questions.length).fill(undefined);
+let status=new Array(questions.length).fill("notVisited");
+let time=300,timerInterval;
+
+/* LOGIN */
+function loginUser(){
+let name=user.value.trim();
+let mobile=pass.value.trim();
+
+if(name.length<2){ loginMsg.innerText="Enter valid name"; return;}
+if(!/^\d{10}$/.test(mobile)){ loginMsg.innerText="Enter valid mobile"; return;}
+
+window.studentName=name;
+
+login.style.display="none";
+exam.style.display="block";
+
+startTimer();
+loadQ();
+}
+
+/* TIMER */
+function startTimer(){
+timerInterval=setInterval(()=>{
+time--;
+let m=Math.floor(time/60);
+let s=time%60;
+timer.innerText=`Time: ${m}:${s.toString().padStart(2,'0')}`;
+if(time<=0) submitExam();
+},1000);
+}
+
+/* LOAD QUESTION */
+function loadQ(){
+let q=questions[index];
+question.innerText=(index+1)+". "+q.q;
+
+let html="";
+q.options.forEach(opt=>{
+let checked=(answers[index]===opt)?"checked":"";
+html+=`<label class="option">
+<input type="radio" name="q${index}" ${checked}
+onchange="selectOption('${opt}')"> ${opt}
+</label>`;
+});
+options.innerHTML=html;
+
+updateCounter();
+loadPalette();
+}
+
+/* FUNCTIONS */
+function selectOption(val){ answers[index]=val; status[index]="answered"; }
+function prev(){ if(index>0){index--; loadQ();}}
+function saveAndNext(){ if(index<questions.length-1){index++; loadQ();}}
+function clearAnswer(){ answers[index]=undefined; status[index]="notAnswered"; loadQ(); }
+function markReview(){ status[index]="review"; loadPalette(); }
+
+function updateCounter(){
+counter.innerText=`Answered: ${answers.filter(a=>a).length}/${questions.length}`;
+}
+
+function loadPalette(){
+let html="";
+for(let i=0;i<questions.length;i++){
+let color="#ccc";
+if(status[i]=="answered") color="green";
+else if(status[i]=="notAnswered") color="red";
+else if(status[i]=="review") color="orange";
+
+html+=`<button class="palette-btn" style="background:${color}" onclick="goTo(${i})">${i+1}</button>`;
+}
+palette.innerHTML=html;
+}
+
+function goTo(i){ index=i; loadQ(); }
+
+function confirmSubmit(){ if(confirm("Submit exam?")) submitExam(); }
+
+/* RESULT */
+function submitExam(){
+clearInterval(timerInterval);
+
+exam.style.display="none";
+result.style.display="block";
+
+let correct=0,wrong=0,unattempted=0;
+
+questions.forEach((q,i)=>{
+if(answers[i]===undefined) unattempted++;
+else if(answers[i]===q.options[q.ans]) correct++;
+else wrong++;
+});
+
+let total=questions.length;
+let score=((correct/total)*100).toFixed(1);
+
+tTotal.innerText=total;
+tCorrect.innerText=correct;
+tWrong.innerText=wrong;
+tUnattempted.innerText=unattempted;
+tScore.innerText=score+"%";
+
+new Chart(pieChart,{type:"pie",data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]}});
+new Chart(barChart,{type:"bar",data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]}});
+
+generateReview();
+}
+
+/* REVIEW */
+function generateReview(){
+let html="";
+questions.forEach((q,i)=>{
+let bg="unattempted-bg";
+if(answers[i]===q.options[q.ans]) bg="correct-bg";
+else if(answers[i]!==undefined) bg="wrong-bg";
+
+html+=`<div class="review-box ${bg}">
+<b>Q${i+1}: ${q.q}</b><br>`;
+q.options.forEach(opt=>{
+let style="";
+if(opt===q.options[q.ans]) style="color:green;font-weight:bold;";
+if(opt===answers[i] && opt!==q.options[q.ans]) style="color:red;";
+html+=`<div style="${style}">${opt}</div>`;
+});
+html+="</div>";
+});
+review.innerHTML=html;
+}
+
+/* PDF */
+async function downloadPDF(){
+const { jsPDF } = window.jspdf;
+const canvas = await html2canvas(resultContent);
+const img = canvas.toDataURL("image/png");
+
+const pdf = new jsPDF();
+pdf.text(`Name: ${window.studentName}`,10,10);
+pdf.addImage(img,'PNG',0,20,190,0);
+pdf.save("Result.pdf");
+}
+
+</script>
+
+</body>
+</html>

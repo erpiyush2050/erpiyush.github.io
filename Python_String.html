@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>CBT Exam</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body { margin:0; font-family:Arial; background:#f4f6f8; }
+
+/* LOGIN */
+.login-container{
+height:100vh; display:flex; justify-content:center; align-items:center;
+background:linear-gradient(135deg,#007bff,#00c6ff);
+}
+.login-box{
+background:white; padding:40px; border-radius:15px; width:300px;
+box-shadow:0 10px 25px rgba(0,0,0,0.2); text-align:center;
+}
+
+/* HEADER */
+.header {background:#1a73e8;color:white;padding:15px;display:flex;justify-content:space-between;}
+
+.container { display:flex; height:85vh; }
+.left { width:20%; background:#fff; padding:10px; overflow:auto; }
+.right { width:80%; padding:20px; }
+
+.option {
+display:block;padding:12px;margin:8px 0;background:#eee;border-radius:8px;cursor:pointer;
+}
+
+.btn{
+padding:10px 18px;border:none;border-radius:8px;color:white;font-weight:bold;cursor:pointer;margin:5px;
+}
+.blue{ background:#007bff; }
+.green{ background:#28a745; }
+.yellow{ background:#ffc107; color:black; }
+.red{ background:#dc3545; }
+
+.palette-btn {width:40px;height:40px;margin:5px;border:none;border-radius:6px;}
+
+/* RESULT */
+.result-card{background:white;padding:25px;border-radius:15px;max-width:1200px;margin:20px auto;}
+.score-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;}
+.score-box{background:#f8f9fc;padding:15px;border-radius:10px;text-align:center;}
+.chart-container{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;}
+.chart-box{ height:300px; }
+.analysis{ margin-top:20px;padding:15px;background:#eef4ff;border-radius:10px;}
+.subject-box{padding:10px;margin:5px 0;display:flex;justify-content:space-between;}
+.good{ background:#d4edda; } .avg{ background:#fff3cd; } .weak{ background:#f8d7da; }
+
+.review-box{padding:12px;margin:10px 0;border-radius:8px;}
+.correct-bg{ background:#d4edda; }
+.wrong-bg{ background:#f8d7da; }
+.unattempted-bg{ background:#fff3cd; }
+
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="login-container">
+<div class="login-box">
+<h2>CBT Login</h2>
+<input id="user" placeholder="Enter Name"><br><br>
+<input id="pass" placeholder="Enter Mobile"><br><br>
+<button class="btn blue" onclick="loginUser()">Start Exam</button>
+<p id="loginMsg"></p>
+</div>
+</div>
+
+<!-- EXAM -->
+<div id="exam" style="display:none;">
+<div class="header">
+<div>CBT Examination Portal</div>
+<div id="timer"></div>
+</div>
+
+<div class="container">
+<div class="left"><div id="palette"></div></div>
+
+<div class="right">
+<h4 id="counter"></h4>
+<h3 id="question"></h3>
+<div id="options"></div>
+
+<div>
+<button class="btn blue" onclick="prev()">Prev</button>
+<button class="btn green" onclick="saveAndNext()">Next</button>
+<button class="btn yellow" onclick="markReview()">Mark Review</button>
+<button class="btn yellow" onclick="clearAnswer()">Clear</button>
+<button class="btn red" onclick="confirmSubmit()">Submit</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- RESULT -->
+<div id="result" style="display:none;">
+
+<div class="header">
+<div>📊 Result Dashboard</div>
+<button class="btn green" onclick="downloadPDF()">Download PDF</button>
+</div>
+
+<div id="resultContent" class="result-card">
+
+<div class="score-grid">
+<div class="score-box">Total<br><b id="tTotal"></b></div>
+<div class="score-box">Correct<br><b id="tCorrect"></b></div>
+<div class="score-box">Wrong<br><b id="tWrong"></b></div>
+<div class="score-box">Not Attempted<br><b id="tUnattempted"></b></div>
+<div class="score-box">Score<br><b id="tScore"></b></div>
+</div>
+
+<div class="chart-container">
+<div class="chart-box"><canvas id="pieChart"></canvas></div>
+<div class="chart-box"><canvas id="barChart"></canvas></div>
+</div>
+
+<div class="analysis" id="analysisText"></div>
+
+<div class="analysis">
+<h3>📊 Subject-wise Analysis</h3>
+<div id="subjectData"></div>
+</div>
+
+<div class="analysis">
+<h3>⚠ Not Attempted Questions</h3>
+<div id="notAttemptedList"></div>
+</div>
+
+<h3>📝 Question Review</h3>
+<div id="review"></div>
+
+</div>
+</div>
+
+<script>
+
+
+/* Python - string  (150 Question) */
+let questions = [
+
+/* ========= 1–50 ========= */
+
+{q:"What is a string in Python?", options:["Collection of numbers","Sequence of characters","Loop","Function"], ans:1},
+{q:"Which symbol is used to define string?", options:["' '","{ }","[ ]","( )"], ans:0},
+{q:"Strings are?", options:["Mutable","Immutable","Both","None"], ans:1},
+{q:"Index of first character?", options:["0","1","-1","2"], ans:0},
+
+{q:"len('Hello')?", options:["4","5","6","0"], ans:1},
+{q:"'Hi'*2?", options:["HiHi","Hi","Error","None"], ans:0},
+{q:"'A'+'B'?", options:["AB","A B","Error","None"], ans:0},
+
+{q:"'abc'.upper()?", options:["ABC","abc","Error","None"], ans:0},
+{q:"'ABC'.lower()?", options:["abc","ABC","Error","None"], ans:0},
+
+{q:"'abc'[1]?", options:["a","b","c","Error"], ans:1},
+{q:"'abc'[-1]?", options:["a","b","c","Error"], ans:2},
+
+{q:"Which method finds substring?", options:["find()","add()","push()","append()"], ans:0},
+{q:"Which checks digits?", options:["isdigit()","isalpha()","lower()","split()"], ans:0},
+
+{q:"Output: print('abc'.isalpha())", options:["True","False","Error","None"], ans:0},
+{q:"Output: print('123'.isdigit())", options:["True","False","Error","None"], ans:0},
+
+/* IF CONDITIONS */
+
+{q:"Output: if 'a' in 'apple': print('Yes')", options:["Yes","No","Error","None"], ans:0},
+
+{q:"Output: s='abc'; if s=='abc': print('OK')", options:["OK","Error","None","abc"], ans:0},
+
+{q:"Output: s='abc'; if s!='abc': print('No') else: print('Yes')", options:["Yes","No","Error","None"], ans:0},
+
+{q:"Output: if len('abc')==3: print('True')", options:["True","False","Error","None"], ans:0},
+
+{q:"Output: if 'x' in 'abc': print('Yes') else: print('No')", options:["Yes","No","Error","None"], ans:1},
+
+/* MORE THEORY */
+
+{q:"Which operator checks membership?", options:["in","=","==","+"] ,ans:0},
+{q:"Empty string length?", options:["0","1","Error","None"], ans:0},
+
+{q:"'abc'.replace('a','z')?", options:["zbc","abc","Error","None"], ans:0},
+
+{q:"'abc'.find('x')?", options:["-1","0","Error","None"], ans:0},
+
+{q:"Output: print('abc'.count('a'))", options:["1","2","0","Error"], ans:0},
+
+/* IF-ELSE */
+
+{q:"Output: s='hi'; if len(s)>3: print('Big') else: print('Small')", options:["Big","Small","Error","None"], ans:1},
+
+{q:"Output: if 'h' in 'hello': print('Yes') else: print('No')", options:["Yes","No","Error","None"], ans:0},
+
+/* LOOP BASED */
+
+{q:"Output: for i in 'ab': print(i)", options:["a b","ab","a\\nb","Error"], ans:2},
+
+{q:"Output: for i in 'abc': print(i,end='')", options:["abc","a b c","Error","None"], ans:0},
+
+{q:"Output: count=0\nfor i in 'abc': count+=1\nprint(count)", options:["2","3","1","Error"], ans:1},
+
+/* WHILE LOOP */
+
+{q:"Output: s='abc'\ni=0\nwhile i<len(s): print(s[i]); i+=1", options:["a b c","abc","Error","None"], ans:0},
+
+/* NESTED IF */
+
+{q:"Output: s='abc'\nif len(s)==3:\n if 'a' in s: print('Yes')", options:["Yes","No","Error","None"], ans:0},
+
+{q:"Output: s='abc'\nif 'x' in s:\n print('Yes')\nelse:\n print('No')", options:["Yes","No","Error","None"], ans:1},
+
+/* SLICING */
+
+{q:"'Python'[0:2]?", options:["Py","Po","yt","Error"], ans:0},
+{q:"'Python'[::2]?", options:["Pto","Ptn","yon","Error"], ans:0},
+
+{q:"Output: print('abc'[::-1])", options:["cba","abc","Error","None"], ans:0},
+
+{q:"Output: print('abcdef'[1:5:2])", options:["bd","bdf","ace","Error"], ans:0},
+
+/* ========= 51–100 ========= */
+
+{q:"Output: for i in 'xyz': print(i,end='-')", options:["x-y-z-","xyz","x y z","Error"], ans:0},
+
+{q:"Output: s='hello'\nfor i in s:\n if i=='l': print(i)", options:["l l","ll","l","Error"], ans:0},
+
+{q:"Output: s='abc'\nfor i in s:\n print(i.upper(),end='')", options:["ABC","abc","Error","None"], ans:0},
+
+{q:"Output: s='abc'\nfor i in s:\n if i!='b': print(i,end='')", options:["ac","abc","bc","Error"], ans:0},
+
+{q:"Output: s='abc'\ni=0\nwhile i<len(s):\n print(s[i],end='')\n i+=1", options:["abc","a b c","Error","None"], ans:0},
+
+{q:"Output: s='abc'\ni=0\nwhile i<len(s):\n if s[i]=='b': print('Yes')\n i+=1", options:["Yes","No","Error","None"], ans:0},
+
+{q:"Output: count=0\nfor i in 'hello':\n if i=='l': count+=1\nprint(count)", options:["1","2","3","0"], ans:1},
+
+{q:"Output: s='python'\nprint(s[1:4])", options:["yth","ytho","pyt","Error"], ans:0},
+
+{q:"Output: s='python'\nprint(s[-3:])", options:["hon","tho","on","Error"], ans:0},
+
+{q:"Output: print('abc'.startswith('a'))", options:["True","False","Error","None"], ans:0},
+
+{q:"Output: print('abc'.endswith('z'))", options:["True","False","Error","None"], ans:1},
+
+{q:"Output: print('hello world'.split())", options:["['hello','world']","['helloworld']","Error","None"], ans:0},
+
+{q:"Output: print('a,b,c'.split(','))", options:["['a','b','c']","['abc']","Error","None"], ans:0},
+
+{q:"Output: print('  hi  '.strip())", options:["hi","  hi  ","Error","None"], ans:0},
+
+{q:"Output: print('abc'.replace('b','x'))", options:["axc","abc","Error","None"], ans:0},
+
+{q:"Output: print('abcabc'.count('a'))", options:["1","2","3","0"], ans:1},
+
+{q:"Output: print('abc'.find('c'))", options:["2","1","0","-1"], ans:0},
+
+{q:"Output: print('abc'.find('z'))", options:["-1","0","Error","None"], ans:0},
+
+{q:"Output: print('ABC'.isupper())", options:["True","False","Error","None"], ans:0},
+
+{q:"Output: print('abc'.islower())", options:["True","False","Error","None"], ans:0},
+
+{q:"Output: print('abc123'.isalnum())", options:["True","False","Error","None"], ans:0},
+
+{q:"Output: print('abc 123'.isalnum())", options:["True","False","Error","None"], ans:1},
+
+/* IF ELSE + LOOP MIX */
+
+{q:"Output: s='abc'\nfor i in s:\n if i=='a': print('A') else: print('X')", options:["A X X","AXX","XXX","Error"], ans:0},
+
+{q:"Output: s='abc'\nfor i in s:\n if i!='b': print(i,end='')", options:["ac","abc","bc","Error"], ans:0},
+
+{q:"Output: s='hello'\nfor i in s:\n if i=='o': break\n print(i,end='')", options:["hell","hello","hel","Error"], ans:0},
+
+{q:"Output: s='hello'\nfor i in s:\n if i=='l': continue\n print(i,end='')", options:["heo","hello","heo","Error"], ans:0},
+
+{q:"Output: s='abc'\nfor i in s:\n pass\nprint('Done')", options:["Done","Error","None","abc"], ans:0},
+
+/* NESTED IF */
+
+{q:"Output: s='abc'\nif len(s)==3:\n if 'b' in s:\n  print('Yes')", options:["Yes","No","Error","None"], ans:0},
+
+{q:"Output: s='abc'\nif len(s)==2:\n if 'a' in s:\n  print('Yes')\nelse:\n print('No')", options:["Yes","No","Error","None"], ans:1},
+
+/* ADVANCED METHODS */
+
+{q:"Output: print('abc'.center(7,'*'))", options:["**abc**","abc***","***abc","Error"], ans:0},
+
+{q:"Output: print('abc'.ljust(5,'-'))", options:["abc--","--abc","Error","None"], ans:0},
+
+{q:"Output: print('abc'.rjust(5,'-'))", options:["--abc","abc--","Error","None"], ans:0},
+
+{q:"Output: print('hello'.swapcase())", options:["HELLO","hELLO","Hello","Error"], ans:1},
+
+{q:"Output: print('hello world'.title())", options:["Hello World","HELLO WORLD","hello world","Error"], ans:0},
+
+{q:"Output: print('abc'.zfill(5))", options:["00abc","abc00","Error","None"], ans:0},
+
+/* CHARACTER FUNCTIONS */
+
+{q:"Output: print(ord('A'))", options:["65","97","Error","None"], ans:0},
+
+{q:"Output: print(chr(97))", options:["a","A","97","Error"], ans:0},
+
+{q:"Output: print(chr(ord('A')))", options:["A","a","Error","None"], ans:0},
+
+/* JOIN & SPLIT */
+
+{q:"Output: print('-'.join(['a','b','c']))", options:["a-b-c","abc","Error","None"], ans:0},
+
+{q:"Output: print(' '.join(['hi','all']))", options:["hi all","hiall","Error","None"], ans:0},
+
+{q:"Output: print('abc'.join('12'))", options:["1abc2","12","Error","None"], ans:0},
+
+/* FINAL LOGIC */
+
+{q:"Output: s='abc'\nprint(s*2)", options:["abcabc","abc","Error","None"], ans:0},
+
+{q:"Output: s='abc'\nprint(s[::2])", options:["ac","ab","bc","Error"], ans:0},
+
+{q:"Output: s='abcdef'\nprint(s[1:5:2])", options:["bd","bdf","ace","Error"], ans:0},
+
+{q:"Output: print(len('hello world'))", options:["11","10","12","Error"], ans:0},
+
+/* ========= 101–150 ========= */
+
+{q:"Output: print(max('abc'))", options:["c","a","b","Error"], ans:0},
+{q:"Output: print(min('abc'))", options:["a","b","c","Error"], ans:0},
+
+{q:"Output: print(sorted('cba'))", options:["['a','b','c']","cba","Error","None"], ans:0},
+
+{q:"Output: s='abc'\nprint(s[1:-1])", options:["b","ab","bc","Error"], ans:0},
+
+{q:"Output: s='abcdef'\nprint(s[-4:-1])", options:["cde","def","bcd","Error"], ans:0},
+
+{q:"Output: s='abcdef'\nprint(s[::-2])", options:["fdb","eca","ace","Error"], ans:0},
+
+{q:"Output: print('abc'.count(''))", options:["4","3","0","Error"], ans:0},
+
+{q:"Output: print('abc'.find(''))", options:["0","-1","Error","None"], ans:0},
+
+{q:"Output: print('abc'.replace('','-'))", options:["-a-b-c-","abc","Error","None"], ans:0},
+
+{q:"Output: print('abc'.startswith(''))", options:["True","False","Error","None"], ans:0},
+
+{q:"Output: print('abc'.endswith(''))", options:["True","False","Error","None"], ans:0},
+
+{q:"Output: print('abc'.partition('b'))", options:["('a','b','c')","Error","None","('abc')"], ans:0},
+
+{q:"Output: print('abc'.partition('x'))", options:["('abc','','')","Error","None","('','x','abc')"], ans:0},
+
+{q:"Output: print('abc'.rpartition('b'))", options:["('a','b','c')","Error","None","('abc')"], ans:0},
+
+{q:"Output: print('abc'.rpartition('x'))", options:["('','','abc')","Error","None","('abc','','')"], ans:0},
+
+/* LOOP + IF COMPLEX */
+
+{q:"Output: s='banana'\ncount=0\nfor i in s:\n if i=='a': count+=1\nprint(count)", options:["3","2","4","1"], ans:0},
+
+{q:"Output: s='banana'\nfor i in s:\n if i=='a': print('X',end='')", options:["XXX","XX","XXXX","Error"], ans:0},
+
+{q:"Output: s='abc'\nfor i in s:\n for j in s:\n  print(i+j,end=' ')", options:["aa ab ac ba bb bc ca cb cc","abc","Error","None"], ans:0},
+
+{q:"Output: s='abc'\nfor i in range(len(s)):\n print(s[i])", options:["a b c","abc","Error","None"], ans:0},
+
+{q:"Output: s='abc'\nfor i in range(len(s)):\n if i%2==0:\n  print(s[i],end='')", options:["ac","ab","bc","Error"], ans:0},
+
+/* WHILE + NESTED */
+
+{q:"Output: s='abc'\ni=0\nwhile i<len(s):\n if s[i]=='b': print('Yes')\n i+=1", options:["Yes","No","Error","None"], ans:0},
+
+{q:"Output: s='abc'\ni=0\nwhile i<len(s):\n print(s[i],end='')\n i+=2", options:["ac","ab","bc","Error"], ans:0},
+
+/* ADVANCED STRING METHODS */
+
+{q:"Output: print('hello'.capitalize())", options:["Hello","HELLO","hello","Error"], ans:0},
+
+{q:"Output: print('HELLO'.lower().upper())", options:["HELLO","hello","Error","None"], ans:0},
+
+{q:"Output: print('abc'.isnumeric())", options:["True","False","Error","None"], ans:1},
+
+{q:"Output: print('123'.isnumeric())", options:["True","False","Error","None"], ans:0},
+
+{q:"Output: print('abc123'.isnumeric())", options:["True","False","Error","None"], ans:1},
+
+{q:"Output: print(' '.isspace())", options:["True","False","Error","None"], ans:0},
+
+{q:"Output: print(''.isspace())", options:["True","False","Error","None"], ans:1},
+
+/* JOIN + SPLIT EDGE */
+
+{q:"Output: print('a,b,c'.split(','))", options:["['a','b','c']","['abc']","Error","None"], ans:0},
+
+{q:"Output: print('abc'.split('b'))", options:["['a','c']","['abc']","Error","None"], ans:0},
+
+{q:"Output: print('abc'.join('123'))", options:["1abc2abc3","123","Error","None"], ans:0},
+
+{q:"Output: print(''.join(['a','b','c']))", options:["abc","a b c","Error","None"], ans:0},
+
+/* FINAL TRICKY */
+
+{q:"Output: s='abc'\nprint('a' in s and 'b' in s)", options:["True","False","Error","None"], ans:0},
+
+{q:"Output: s='abc'\nprint('x' in s or 'a' in s)", options:["True","False","Error","None"], ans:0},
+
+{q:"Output: s='abc'\nprint(not('x' in s))", options:["True","False","Error","None"], ans:0},
+
+{q:"Output: print(bool(''))", options:["False","True","Error","None"], ans:0},
+
+{q:"Output: print(bool('abc'))", options:["True","False","Error","None"], ans:0},
+
+{q:"Output: print(len('a b c'))", options:["5","3","4","Error"], ans:0},
+
+{q:"Output: print('abc'+'def')", options:["abcdef","abc def","Error","None"], ans:0},
+
+{q:"Output: print('abc'*3)", options:["abcabcabc","abc","Error","None"], ans:0},
+
+{q:"Output: print(list('abc'))", options:["['a','b','c']","abc","Error","None"], ans:0},
+
+{q:"Output: print(tuple('ab'))", options:["('a','b')","ab","Error","None"], ans:0},
+
+{q:"Output: print(set('aba'))", options:["{'a','b'}","aba","Error","None"], ans:0},
+
+];
+
+
+
+
+let index=0,answers=[],status=[],time=300,timerInterval;
+
+/* LOGIN */
+function loginUser(){
+
+const name = document.getElementById("user").value.trim();
+const mobile = document.getElementById("pass").value.trim();
+const msg = document.getElementById("loginMsg");
+
+if(name.length <= 2){
+    msg.innerText = "Enter valid name";
+    return;
+}
+
+if(!/^\d{10}$/.test(mobile)){
+    msg.innerText = "Enter valid mobile";
+    return;
+}
+
+// store for PDF
+window.studentName = name;
+window.studentMobile = mobile;
+
+document.getElementById("login").style.display = "none";
+document.getElementById("exam").style.display = "block";
+
+startTimer();
+loadQ();
+}
+
+/* TIMER */
+function startTimer(){
+timerInterval=setInterval(()=>{
+time--;
+let m=Math.floor(time/60);
+let s=time%60;
+document.getElementById("timer").innerText=`Time: ${m}:${s<10?'0'+s:s}`;
+if(time<=0) submitExam();
+},1000);
+}
+
+/* MARK REVIEW */
+function markReview(){ status[index]="review"; loadPalette(); }
+
+/* LOAD */
+function loadQ(){
+if(status[index]==="notVisited") status[index]="notAnswered";
+
+let q=questions[index];
+document.getElementById("question").innerText=(index+1)+". "+q.q;
+
+let html="";
+q.options.forEach(opt=>{
+let checked=(answers[index]===opt)?"checked":"";
+html+=`<label class="option">
+<input type="radio" name="q${index}" ${checked}
+onchange="selectOption('${opt}')"> ${opt}
+</label>`;
+});
+document.getElementById("options").innerHTML=html;
+
+updateCounter();
+loadPalette();
+}
+
+function selectOption(val){ answers[index]=val; status[index]="answered"; loadPalette(); }
+function prev(){ if(index>0){index--; loadQ();}}
+function saveAndNext(){ if(index<questions.length-1){index++; loadQ();}}
+function clearAnswer(){ answers[index]=undefined; status[index]="notAnswered"; loadQ(); }
+
+function updateCounter(){
+let answered=answers.filter(a=>a!==undefined).length;
+document.getElementById("counter").innerText=`Answered: ${answered}/${questions.length}`;
+}
+
+function loadPalette(){
+let html="";
+for(let i=0;i<questions.length;i++){
+let color="#ccc";
+if(status[i]==="answered") color="green";
+else if(status[i]==="notAnswered") color="red";
+else if(status[i]==="review") color="orange";
+
+html+=`<button class="palette-btn" style="background:${color}" onclick="goTo(${i})">${i+1}</button>`;
+}
+document.getElementById("palette").innerHTML=html;
+}
+
+function goTo(i){ index=i; loadQ(); }
+function confirmSubmit(){ if(confirm("Submit exam?")) submitExam(); }
+
+/* RESULT */
+function submitExam(){
+
+clearInterval(timerInterval);
+
+document.getElementById("exam").style.display="none";
+document.getElementById("result").style.display="block";
+
+let correct=0,wrong=0,unattempted=0,subjectStats={},notAttemptedQ=[];
+
+questions.forEach((q,i)=>{
+if(!subjectStats[q.subject]) subjectStats[q.subject]={correct:0,total:0};
+subjectStats[q.subject].total++;
+
+if(answers[i]===undefined){
+unattempted++;
+notAttemptedQ.push(i+1);
+}
+else if(answers[i]===q.options[q.ans]){
+correct++; subjectStats[q.subject].correct++;
+}
+else wrong++;
+});
+
+let total=questions.length;
+let score=((correct/total)*100).toFixed(1);
+
+tTotal.innerText=total;
+tCorrect.innerText=correct;
+tWrong.innerText=wrong;
+tUnattempted.innerText=unattempted;
+tScore.innerText=score+"%";
+
+notAttemptedList.innerText = notAttemptedQ.length ? notAttemptedQ.join(", ") : "None";
+
+new Chart(pieChart,{type:"pie",data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]}});
+new Chart(barChart,{type:"bar",data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]}});
+
+generateReview();
+}
+
+/* REVIEW */
+function generateReview(){
+let html="";
+questions.forEach((q,i)=>{
+let bg="unattempted-bg";
+if(answers[i]===q.options[q.ans]) bg="correct-bg";
+else if(answers[i]!==undefined) bg="wrong-bg";
+
+html+=`<div class="review-box ${bg}">
+<b>Q${i+1}: ${q.q}</b><br>`;
+q.options.forEach(opt=>{
+let style="";
+if(opt===q.options[q.ans]) style="color:green;font-weight:bold;";
+if(opt===answers[i] && opt!==q.options[q.ans]) style="color:red;";
+html+=`<div style="${style}">${opt}</div>`;
+});
+html+="</div>";
+});
+document.getElementById("review").innerHTML=html;
+}
+
+/* ✅ CLEAN PDF FUNCTION (NO DUPLICATE BELOW) */
+async function downloadPDF(){
+
+const { jsPDF } = window.jspdf;
+
+const element = document.getElementById("resultContent");
+
+const canvas = await html2canvas(element, { scale: 2 });
+
+const imgData = canvas.toDataURL("image/png");
+
+const pdf = new jsPDF('p','mm','a4');
+
+const pageWidth = pdf.internal.pageSize.getWidth();
+const pageHeight = pdf.internal.pageSize.getHeight();
+
+const imgWidth = pageWidth;
+const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+let heightLeft = imgHeight;
+let position = 20;
+
+const now = new Date();
+
+pdf.setFontSize(12);
+pdf.text(`Name: ${window.studentName || "Student"}`, 10, 10);
+pdf.text(`Date: ${now.toLocaleDateString()}`, 150, 10);
+
+pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+heightLeft -= pageHeight;
+
+while (heightLeft > 0) {
+    position = heightLeft - imgHeight + 20;
+    pdf.addPage();
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+}
+
+pdf.save("Result.pdf");
+}
+
+</script>
+
+</body>
+</html>
