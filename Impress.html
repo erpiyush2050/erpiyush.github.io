@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>O level -CBT Exam</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body { margin:0; font-family:Arial; background:#f4f6f8; }
+
+/* LOGIN */
+.login-container{
+height:100vh; display:flex; justify-content:center; align-items:center;
+background:linear-gradient(135deg,#007bff,#00c6ff);
+}
+.login-box{
+background:white; padding:40px; border-radius:15px; width:300px;
+box-shadow:0 10px 25px rgba(0,0,0,0.2); text-align:center;
+}
+
+/* HEADER */
+.header {background:#1a73e8;color:white;padding:15px;display:flex;justify-content:space-between;}
+
+.container { display:flex; height:85vh; }
+.left { width:20%; background:#fff; padding:10px; overflow:auto; }
+.right { width:80%; padding:20px; }
+
+.option {
+display:block;padding:12px;margin:8px 0;background:#eee;border-radius:8px;cursor:pointer;
+}
+
+.btn{
+padding:10px 18px;border:none;border-radius:8px;color:white;font-weight:bold;cursor:pointer;margin:5px;
+}
+.blue{ background:#007bff; }
+.green{ background:#28a745; }
+.yellow{ background:#ffc107; color:black; }
+.red{ background:#dc3545; }
+
+.palette-btn {width:40px;height:40px;margin:5px;border:none;border-radius:6px;}
+
+/* RESULT */
+.result-card{background:white;padding:25px;border-radius:15px;max-width:1200px;margin:20px auto;}
+.score-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;}
+.score-box{background:#f8f9fc;padding:15px;border-radius:10px;text-align:center;}
+.chart-container{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;}
+.chart-box{ height:300px; }
+.analysis{ margin-top:20px;padding:15px;background:#eef4ff;border-radius:10px;}
+.subject-box{padding:10px;margin:5px 0;display:flex;justify-content:space-between;}
+.good{ background:#d4edda; } .avg{ background:#fff3cd; } .weak{ background:#f8d7da; }
+
+.review-box{padding:12px;margin:10px 0;border-radius:8px;}
+.correct-bg{ background:#d4edda; }
+.wrong-bg{ background:#f8d7da; }
+.unattempted-bg{ background:#fff3cd; }
+
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="login-container">
+<div class="login-box">
+<h2>O Levvel - CBT Login</h2>
+<input id="user" placeholder="Enter Name"><br><br>
+<input id="pass" placeholder="Enter Mobile"><br><br>
+<button class="btn blue" onclick="loginUser()">Start Exam</button>
+<p id="loginMsg"></p>
+</div>
+</div>
+
+<!-- EXAM -->
+<div id="exam" style="display:none;">
+<div class="header">
+<div>O level - CBT Examination Portal</div>
+<div id="timer"></div>
+</div>
+
+<div class="container">
+<div class="left"><div id="palette"></div></div>
+
+<div class="right">
+<h4 id="counter"></h4>
+<h3 id="question"></h3>
+<div id="options"></div>
+
+<div>
+<button class="btn blue" onclick="prev()">Prev</button>
+<button class="btn green" onclick="saveAndNext()">Next</button>
+<button class="btn yellow" onclick="markReview()">Mark Review</button>
+<button class="btn yellow" onclick="clearAnswer()">Clear</button>
+<button class="btn red" onclick="confirmSubmit()">Submit</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- RESULT -->
+<div id="result" style="display:none;">
+
+<div class="header">
+<div>📊 Result Dashboard</div>
+<button class="btn green" onclick="downloadPDF()">Download PDF</button>
+</div>
+
+<div id="resultContent" class="result-card">
+
+<div class="score-grid">
+<div class="score-box">Total<br><b id="tTotal"></b></div>
+<div class="score-box">Correct<br><b id="tCorrect"></b></div>
+<div class="score-box">Wrong<br><b id="tWrong"></b></div>
+<div class="score-box">Not Attempted<br><b id="tUnattempted"></b></div>
+<div class="score-box">Score<br><b id="tScore"></b></div>
+</div>
+
+<div class="chart-container">
+<div class="chart-box"><canvas id="pieChart"></canvas></div>
+<div class="chart-box"><canvas id="barChart"></canvas></div>
+</div>
+
+<div class="analysis" id="analysisText"></div>
+
+<div class="analysis">
+<h3>📊 Subject-wise Analysis</h3>
+<div id="subjectData"></div>
+</div>
+
+<div class="analysis">
+<h3>⚠ Not Attempted Questions</h3>
+<div id="notAttemptedList"></div>
+</div>
+
+<h3>📝 Question Review</h3>
+<div id="review"></div>
+
+</div>
+</div>
+
+<script>
+
+/* Python - User define function  (150 Question) */
+
+let questions = [
+/* ===== BASICS (1–30) ===== */
+{q:"LibreOffice Impress is used for:", options:["Word Processing","Presentation","Spreadsheet","Database"], ans:1},
+{q:"File extension of Impress file?", options:[".odp",".ods",".odt",".ppt"], ans:0},
+{q:"Default view in Impress?", options:["Normal","Slide Sorter","Notes","Handout"], ans:0},
+{q:"A single page of presentation is called:", options:["Slide","Sheet","Page","Frame"], ans:0},
+{q:"Which menu is used to insert slide?", options:["Insert","Format","Tools","View"], ans:0},
+{q:"Shortcut for new slide?", options:["Ctrl+M","Ctrl+N","Ctrl+S","Ctrl+D"], ans:0},
+{q:"Shortcut to save file?", options:["Ctrl+S","Ctrl+P","Ctrl+O","Ctrl+N"], ans:0},
+{q:"Shortcut to open file?", options:["Ctrl+O","Ctrl+S","Ctrl+P","Ctrl+M"], ans:0},
+{q:"Shortcut to print?", options:["Ctrl+P","Ctrl+S","Ctrl+O","Ctrl+N"], ans:0},
+{q:"Shortcut to exit?", options:["Ctrl+Q","Ctrl+E","Ctrl+X","Ctrl+Z"], ans:0},
+{q:"Which key starts slideshow?", options:["F5","F2","F3","F10"], ans:0},
+{q:"Which key ends slideshow?", options:["Esc","Enter","Tab","Ctrl"], ans:0},
+{q:"Which view shows all slides?", options:["Slide Sorter","Normal","Notes","Outline"], ans:0},
+{q:"Which view is used for notes?", options:["Notes View","Normal","Slide","Sorter"], ans:0},
+{q:"Which option deletes slide?", options:["Delete","Remove","Erase","Cut"], ans:0},
+{q:"Which panel shows slide preview?", options:["Slides Pane","Task Pane","Notes Pane","Menu"], ans:0},
+{q:"Which feature adds animation?", options:["Custom Animation","Transition","Effect","Design"], ans:0},
+{q:"Which feature changes slide transition?", options:["Slide Transition","Animation","Format","Layout"], ans:0},
+{q:"Which option hides slide?", options:["Hide Slide","Delete Slide","Remove Slide","Skip Slide"], ans:0},
+{q:"Which option shows slide number?", options:["Insert → Slide Number","View","Format","Tools"], ans:0},
+{q:"Which option adds header/footer?", options:["Insert","Format","View","Tools"], ans:0},
+{q:"Which option changes font?", options:["Format","Insert","Tools","View"], ans:0},
+{q:"Which tool inserts image?", options:["Insert Image","Insert Chart","Insert Table","Insert Text"], ans:0},
+{q:"Which tool inserts chart?", options:["Insert Chart","Insert Image","Insert Shape","Insert Media"], ans:0},
+{q:"Which tool inserts table?", options:["Insert Table","Insert Shape","Insert Text","Insert Chart"], ans:0},
+{q:"Which menu is used for slideshow settings?", options:["Slide Show","View","Tools","Format"], ans:0},
+{q:"Which feature controls slide design globally?", options:["Master Slide","Layout","Theme","Format"], ans:0},
+{q:"Which option duplicates slide?", options:["Duplicate","Copy","Repeat","Clone"], ans:0},
+{q:"Which option reorders slides?", options:["Slide Sorter","Normal","Notes","Outline"], ans:0},
+{q:"Which feature applies design to all slides?", options:["Master Slide","Layout","Theme","Format"], ans:0},
+
+/* ===== SHORTCUT KEYS (31–70) ===== */
+{q:"Shortcut for bold?", options:["Ctrl+B","Ctrl+I","Ctrl+U","Ctrl+E"], ans:0},
+{q:"Shortcut for italic?", options:["Ctrl+I","Ctrl+B","Ctrl+U","Ctrl+R"], ans:0},
+{q:"Shortcut for underline?", options:["Ctrl+U","Ctrl+I","Ctrl+B","Ctrl+T"], ans:0},
+{q:"Align left shortcut?", options:["Ctrl+L","Ctrl+R","Ctrl+E","Ctrl+J"], ans:0},
+{q:"Align center shortcut?", options:["Ctrl+E","Ctrl+L","Ctrl+R","Ctrl+J"], ans:0},
+{q:"Align right shortcut?", options:["Ctrl+R","Ctrl+L","Ctrl+E","Ctrl+J"], ans:0},
+{q:"Justify shortcut?", options:["Ctrl+J","Ctrl+E","Ctrl+L","Ctrl+R"], ans:0},
+{q:"Copy shortcut?", options:["Ctrl+C","Ctrl+V","Ctrl+X","Ctrl+Z"], ans:0},
+{q:"Paste shortcut?", options:["Ctrl+V","Ctrl+C","Ctrl+X","Ctrl+Z"], ans:0},
+{q:"Cut shortcut?", options:["Ctrl+X","Ctrl+C","Ctrl+V","Ctrl+Z"], ans:0},
+{q:"Undo shortcut?", options:["Ctrl+Z","Ctrl+Y","Ctrl+X","Ctrl+U"], ans:0},
+{q:"Redo shortcut?", options:["Ctrl+Y","Ctrl+Z","Ctrl+X","Ctrl+R"], ans:0},
+{q:"Select all?", options:["Ctrl+A","Ctrl+S","Ctrl+P","Ctrl+N"], ans:0},
+{q:"Find shortcut?", options:["Ctrl+F","Ctrl+H","Ctrl+G","Ctrl+R"], ans:0},
+{q:"Replace shortcut?", options:["Ctrl+H","Ctrl+F","Ctrl+R","Ctrl+G"], ans:0},
+{q:"New presentation?", options:["Ctrl+N","Ctrl+M","Ctrl+S","Ctrl+O"], ans:0},
+{q:"Duplicate slide?", options:["Ctrl+D","Ctrl+M","Ctrl+N","Ctrl+S"], ans:0},
+{q:"Insert text box?", options:["F2","F5","F7","F10"], ans:0},
+{q:"Spell check?", options:["F7","F5","F2","F10"], ans:0},
+{q:"Full screen slideshow?", options:["F5","F7","F2","F10"], ans:0},
+{q:"Next slide?", options:["Enter","Esc","Tab","Backspace"], ans:0},
+{q:"Previous slide?", options:["Backspace","Enter","Tab","Space"], ans:0},
+{q:"Black screen during show?", options:["B","W","Esc","Enter"], ans:0},
+{q:"White screen during show?", options:["W","B","Esc","Enter"], ans:0},
+{q:"End show?", options:["Esc","Enter","Tab","Space"], ans:0},
+{q:"Start slideshow from current slide?", options:["Shift+F5","F5","Ctrl+F5","Alt+F5"], ans:0},
+{q:"Go to first slide shortcut?", options:["Home","End","Ctrl+Home","Ctrl+End"], ans:0},
+{q:"Go to last slide shortcut?", options:["End","Home","Ctrl+End","Ctrl+Home"], ans:0},
+{q:"Insert hyperlink shortcut?", options:["Ctrl+K","Ctrl+H","Ctrl+L","Ctrl+Shift+K"], ans:0},
+{q:"Increase font size?", options:["Ctrl+]","Ctrl+[","Ctrl+>","Ctrl+<"], ans:0},
+
+/* ===== PRACTICAL (71–110) ===== */
+{q:"To add new slide layout use:", options:["Layout","Insert","Format","View"], ans:0},
+{q:"To change background use:", options:["Slide Properties","Insert","View","Tools"], ans:0},
+{q:"To insert video use:", options:["Insert Media","Insert Image","Insert Chart","Insert Table"], ans:0},
+{q:"To group objects use:", options:["Group","Combine","Merge","Join"], ans:0},
+{q:"To ungroup objects use:", options:["Ungroup","Split","Separate","Break"], ans:0},
+{q:"To rotate object use:", options:["Rotate","Flip","Transform","Move"], ans:0},
+{q:"To resize object use:", options:["Handles","Scale","Zoom","Resize Tool"], ans:0},
+{q:"To add hyperlink use:", options:["Insert → Hyperlink","Tools","View","Format"], ans:0},
+{q:"To apply animation use:", options:["Custom Animation","Transition","Layout","View"], ans:0},
+{q:"To apply transition use:", options:["Slide Transition","Animation","Layout","Tools"], ans:0},
+{q:"To reorder slides use:", options:["Slide Sorter","Normal","Notes","Outline"], ans:0},
+{q:"To preview slideshow use:", options:["F5","Ctrl+P","Ctrl+S","Ctrl+N"], ans:0},
+{q:"To show notes use:", options:["Notes View","Normal","Slide","Outline"], ans:0},
+{q:"To insert audio use:", options:["Insert Media","Insert Image","Insert Table","Insert Chart"], ans:0},
+{q:"To change font size use:", options:["Format","Insert","View","Tools"], ans:0},
+{q:"To change color use:", options:["Format","Insert","Tools","View"], ans:0},
+{q:"To align objects use:", options:["Format → Align","Insert","View","Tools"], ans:0},
+{q:"To bring object forward use:", options:["Arrange","Move","Shift","Align"], ans:0},
+{q:"To send object backward use:", options:["Arrange","Move","Shift","Align"], ans:0},
+{q:"To insert shapes use:", options:["Insert → Shape","Format","View","Tools"], ans:0},
+
+/* ===== FINAL SET (111–150 UNIQUE) ===== */
+{q:"Which option inserts date and time?", options:["Insert → Date & Time","View","Format","Tools"], ans:0},
+{q:"Which option inserts header?", options:["Insert → Header/Footer","Format","View","Tools"], ans:0},
+{q:"Which option locks object position?", options:["Format → Position","Insert","View","Tools"], ans:0},
+{q:"Which option crops image?", options:["Crop","Cut","Trim","Resize"], ans:0},
+{q:"Which option zooms slide?", options:["View → Zoom","Insert","Format","Tools"], ans:0},
+{q:"Which option switches view?", options:["View","Insert","Format","Tools"], ans:0},
+{q:"Which panel shows animations?", options:["Sidebar","Menu","Toolbar","Status"], ans:0},
+{q:"Which option exports PDF?", options:["File → Export as PDF","Save As","Print","Open"], ans:0},
+{q:"Which file type opens in Impress?", options:[".odp",".doc",".xls",".txt"], ans:0},
+{q:"Which option starts slideshow?", options:["F5","F2","F3","F10"], ans:0},
+{q:"Which key exits slideshow?", options:["Esc","Enter","Tab","Space"], ans:0},
+{q:"Which key shows black screen?", options:["B","W","Esc","Enter"], ans:0},
+{q:"Which key shows white screen?", options:["W","B","Esc","Enter"], ans:0},
+{q:"Which key moves to next slide?", options:["Enter","Esc","Tab","Backspace"], ans:0},
+{q:"Which key moves to previous slide?", options:["Backspace","Enter","Tab","Space"], ans:0},
+{q:"Which view shows outline?", options:["Outline View","Normal","Sorter","Notes"], ans:0},
+{q:"Which option adds bullets?", options:["Format → Bullets","Insert","View","Tools"], ans:0},
+{q:"Which option adds numbering?", options:["Format → Numbering","Insert","View","Tools"], ans:0},
+{q:"Which option aligns vertically?", options:["Format → Align","Insert","View","Tools"], ans:0},
+{q:"Which feature animates images?", options:["Custom Animation","Transition","Layout","View"], ans:0},
+
+{q:"Which option is used to insert slide number?", options:["Insert → Slide Number","View","Format","Tools"], ans:0},
+{q:"Which option is used to change slide layout?", options:["Layout","Insert","View","Tools"], ans:0},
+{q:"Which panel contains slide thumbnails?", options:["Slides Pane","Sidebar","Toolbar","Menu"], ans:0},
+{q:"Which feature is used to apply animation order?", options:["Animation Pane","Slide Sorter","Layout","View"], ans:0},
+{q:"Which option is used to reset slide formatting?", options:["Reset Slide","Clear","Undo","Remove"], ans:0},
+
+{q:"Which option is used to insert text box?", options:["Insert → Text Box","Format","View","Tools"], ans:0},
+{q:"Which option is used to align middle?", options:["Format → Align","Insert","View","Tools"], ans:0},
+{q:"Which option is used to flip object?", options:["Flip","Rotate","Move","Align"], ans:0},
+{q:"Which option is used to group shapes?", options:["Group","Combine","Merge","Join"], ans:0},
+{q:"Which option is used to ungroup shapes?", options:["Ungroup","Separate","Break","Split"], ans:0},
+
+{q:"Which feature controls slide background?", options:["Slide Properties","Insert","View","Tools"], ans:0},
+{q:"Which feature is used to insert table?", options:["Insert → Table","Insert → Image","Insert → Chart","Insert → Media"], ans:0},
+{q:"Which feature is used to insert chart?", options:["Insert → Chart","Insert → Image","Insert → Table","Insert → Media"], ans:0},
+{q:"Which feature is used to insert image?", options:["Insert → Image","Insert → Chart","Insert → Table","Insert → Media"], ans:0},
+{q:"Which option is used to duplicate object?", options:["Duplicate","Copy","Clone","All"], ans:3},
+
+{q:"Which option is used to move object forward?", options:["Bring Forward","Move","Shift","Align"], ans:0},
+{q:"Which option is used to move object backward?", options:["Send Backward","Move","Shift","Align"], ans:0},
+{q:"Which option is used to change font color?", options:["Format","Insert","View","Tools"], ans:0},
+{q:"Which option is used to change text alignment?", options:["Format → Align","Insert","View","Tools"], ans:0},
+{q:"Which option is used to apply theme?", options:["Master Slide","Layout","Theme","Format"], ans:2},
+
+{q:"Which key is used to start slideshow from current slide?", options:["Shift+F5","F5","Ctrl+F5","Alt+F5"], ans:0},
+{q:"Which key moves to next animation?", options:["Enter","Esc","Tab","Backspace"], ans:0},
+{q:"Which key pauses slideshow?", options:["Space","Enter","Esc","Tab"], ans:0},
+{q:"Which option is used to insert audio?", options:["Insert → Media","Insert → Image","Insert → Chart","Insert → Table"], ans:0},
+{q:"Which option is used to insert video?", options:["Insert → Media","Insert → Image","Insert → Chart","Insert → Table"], ans:0},
+
+{q:"Which option is used to change slide size?", options:["Slide Properties","Insert","View","Tools"], ans:0},
+{q:"Which option is used to apply animation effect?", options:["Custom Animation","Transition","Layout","View"], ans:0},
+{q:"Which option is used to apply slide transition?", options:["Slide Transition","Animation","Layout","Tools"], ans:0},
+{q:"Which option is used to reorder slides?", options:["Slide Sorter","Normal","Notes","Outline"], ans:0},
+{q:"Which option is used to preview slideshow?", options:["F5","Ctrl+P","Ctrl+S","Ctrl+N"], ans:0},
+
+{q:"Which option is used to show slide notes?", options:["Notes View","Normal","Slide","Outline"], ans:0},
+{q:"Which option is used to insert shapes?", options:["Insert → Shape","Format","View","Tools"], ans:0},
+{q:"Which option is used to change transparency?", options:["Format → Area","Insert","View","Tools"], ans:0},
+{q:"Which option is used to crop image?", options:["Crop","Trim","Cut","Resize"], ans:0},
+{q:"Which option is used to zoom slide?", options:["View → Zoom","Insert","Format","Tools"], ans:0},
+
+{q:"Which option is used to switch views?", options:["View","Insert","Format","Tools"], ans:0},
+{q:"Which option is used to check spelling?", options:["F7","F5","F2","F10"], ans:0},
+{q:"Which option is used to align center?", options:["Ctrl+E","Ctrl+L","Ctrl+R","Ctrl+J"], ans:0},
+{q:"Which option is used to align right?", options:["Ctrl+R","Ctrl+L","Ctrl+E","Ctrl+J"], ans:0},
+{q:"Which option is used to justify text?", options:["Ctrl+J","Ctrl+L","Ctrl+E","Ctrl+R"], ans:0},
+
+{q:"Which option is used to bold text?", options:["Ctrl+B","Ctrl+I","Ctrl+U","Ctrl+E"], ans:0},
+{q:"Which option is used to italic text?", options:["Ctrl+I","Ctrl+B","Ctrl+U","Ctrl+R"], ans:0},
+{q:"Which option is used to underline text?", options:["Ctrl+U","Ctrl+I","Ctrl+B","Ctrl+T"], ans:0},
+{q:"Which option is used to undo action?", options:["Ctrl+Z","Ctrl+Y","Ctrl+X","Ctrl+U"], ans:0},
+{q:"Which option is used to redo action?", options:["Ctrl+Y","Ctrl+Z","Ctrl+X","Ctrl+R"], ans:0},
+
+{q:"Which option is used to select all?", options:["Ctrl+A","Ctrl+S","Ctrl+P","Ctrl+N"], ans:0},
+{q:"Which option is used to find text?", options:["Ctrl+F","Ctrl+H","Ctrl+G","Ctrl+R"], ans:0},
+{q:"Which option is used to replace text?", options:["Ctrl+H","Ctrl+F","Ctrl+R","Ctrl+G"], ans:0},
+{q:"Which option is used to save presentation?", options:["Ctrl+S","Ctrl+P","Ctrl+O","Ctrl+N"], ans:0},
+{q:"Which option is used to open presentation?", options:["Ctrl+O","Ctrl+S","Ctrl+P","Ctrl+N"], ans:0}
+];
+
+
+let index=0,answers=[],status=[],time=300,timerInterval;
+
+/* LOGIN */
+function loginUser(){
+
+const name = document.getElementById("user").value.trim();
+const mobile = document.getElementById("pass").value.trim();
+const msg = document.getElementById("loginMsg");
+
+if(name.length <= 2){
+    msg.innerText = "Enter valid name";
+    return;
+}
+
+if(!/^\d{10}$/.test(mobile)){
+    msg.innerText = "Enter valid mobile";
+    return;
+}
+
+// store for PDF
+window.studentName = name;
+window.studentMobile = mobile;
+
+document.getElementById("login").style.display = "none";
+document.getElementById("exam").style.display = "block";
+
+startTimer();
+loadQ();
+}
+
+/* TIMER */
+function startTimer(){
+timerInterval=setInterval(()=>{
+time--;
+let m=Math.floor(time/60);
+let s=time%60;
+document.getElementById("timer").innerText=`Time: ${m}:${s<10?'0'+s:s}`;
+if(time<=0) submitExam();
+},1000);
+}
+
+/* MARK REVIEW */
+function markReview(){ status[index]="review"; loadPalette(); }
+
+/* LOAD */
+function loadQ(){
+if(status[index]==="notVisited") status[index]="notAnswered";
+
+let q=questions[index];
+document.getElementById("question").innerText=(index+1)+". "+q.q;
+
+let html="";
+q.options.forEach(opt=>{
+let checked=(answers[index]===opt)?"checked":"";
+html+=`<label class="option">
+<input type="radio" name="q${index}" ${checked}
+onchange="selectOption('${opt}')"> ${opt}
+</label>`;
+});
+document.getElementById("options").innerHTML=html;
+
+updateCounter();
+loadPalette();
+}
+
+function selectOption(val){ answers[index]=val; status[index]="answered"; loadPalette(); }
+function prev(){ if(index>0){index--; loadQ();}}
+function saveAndNext(){ if(index<questions.length-1){index++; loadQ();}}
+function clearAnswer(){ answers[index]=undefined; status[index]="notAnswered"; loadQ(); }
+
+function updateCounter(){
+let answered=answers.filter(a=>a!==undefined).length;
+document.getElementById("counter").innerText=`Answered: ${answered}/${questions.length}`;
+}
+
+function loadPalette(){
+let html="";
+for(let i=0;i<questions.length;i++){
+let color="#ccc";
+if(status[i]==="answered") color="green";
+else if(status[i]==="notAnswered") color="red";
+else if(status[i]==="review") color="orange";
+
+html+=`<button class="palette-btn" style="background:${color}" onclick="goTo(${i})">${i+1}</button>`;
+}
+document.getElementById("palette").innerHTML=html;
+}
+
+function goTo(i){ index=i; loadQ(); }
+function confirmSubmit(){ if(confirm("Submit exam?")) submitExam(); }
+
+/* RESULT */
+function submitExam(){
+
+clearInterval(timerInterval);
+
+document.getElementById("exam").style.display="none";
+document.getElementById("result").style.display="block";
+
+let correct=0,wrong=0,unattempted=0,subjectStats={},notAttemptedQ=[];
+
+questions.forEach((q,i)=>{
+if(!subjectStats[q.subject]) subjectStats[q.subject]={correct:0,total:0};
+subjectStats[q.subject].total++;
+
+if(answers[i]===undefined){
+unattempted++;
+notAttemptedQ.push(i+1);
+}
+else if(answers[i]===q.options[q.ans]){
+correct++; subjectStats[q.subject].correct++;
+}
+else wrong++;
+});
+
+let total=questions.length;
+let score=((correct/total)*100).toFixed(1);
+
+tTotal.innerText=total;
+tCorrect.innerText=correct;
+tWrong.innerText=wrong;
+tUnattempted.innerText=unattempted;
+tScore.innerText=score+"%";
+
+notAttemptedList.innerText = notAttemptedQ.length ? notAttemptedQ.join(", ") : "None";
+
+new Chart(pieChart,{type:"pie",data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]}});
+new Chart(barChart,{type:"bar",data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]}});
+
+generateReview();
+}
+
+/* REVIEW */
+function generateReview(){
+let html="";
+questions.forEach((q,i)=>{
+let bg="unattempted-bg";
+if(answers[i]===q.options[q.ans]) bg="correct-bg";
+else if(answers[i]!==undefined) bg="wrong-bg";
+
+html+=`<div class="review-box ${bg}">
+<b>Q${i+1}: ${q.q}</b><br>`;
+q.options.forEach(opt=>{
+let style="";
+if(opt===q.options[q.ans]) style="color:green;font-weight:bold;";
+if(opt===answers[i] && opt!==q.options[q.ans]) style="color:red;";
+html+=`<div style="${style}">${opt}</div>`;
+});
+html+="</div>";
+});
+document.getElementById("review").innerHTML=html;
+}
+
+/* ✅ CLEAN PDF FUNCTION (NO DUPLICATE BELOW) */
+async function downloadPDF(){
+
+const { jsPDF } = window.jspdf;
+
+const element = document.getElementById("resultContent");
+
+const canvas = await html2canvas(element, { scale: 2 });
+
+const imgData = canvas.toDataURL("image/png");
+
+const pdf = new jsPDF('p','mm','a4');
+
+const pageWidth = pdf.internal.pageSize.getWidth();
+const pageHeight = pdf.internal.pageSize.getHeight();
+
+const imgWidth = pageWidth;
+const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+let heightLeft = imgHeight;
+let position = 20;
+
+const now = new Date();
+
+pdf.setFontSize(12);
+pdf.text(`Name: ${window.studentName || "Student"}`, 10, 10);
+pdf.text(`Date: ${now.toLocaleDateString()}`, 150, 10);
+
+pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+heightLeft -= pageHeight;
+
+while (heightLeft > 0) {
+    position = heightLeft - imgHeight + 20;
+    pdf.addPage();
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+}
+
+pdf.save("Result.pdf");
+}
+
+</script>
+
+</body>
+</html>
