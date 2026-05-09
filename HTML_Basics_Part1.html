@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>O level - CBT Exam</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body { margin:0; font-family:Arial; background:#f4f6f8; }
+
+.login-container{
+height:100vh; display:flex; justify-content:center; align-items:center;
+background:linear-gradient(135deg,#007bff,#00c6ff);
+}
+.login-box{
+background:white; padding:40px; border-radius:15px; width:300px;
+box-shadow:0 10px 25px rgba(0,0,0,0.2); text-align:center;
+}
+
+.header {
+background:#1a73e8;color:white;padding:15px;
+display:flex;justify-content:space-between;align-items:center;
+}
+
+.container { display:flex; height:85vh; }
+.left { width:20%; background:#fff; padding:10px; overflow:auto; }
+.right { width:80%; padding:20px; }
+
+.option {
+display:block;padding:12px;margin:8px 0;background:#eee;border-radius:8px;cursor:pointer;
+}
+
+.btn{
+padding:10px 18px;border:none;border-radius:8px;color:white;font-weight:bold;cursor:pointer;margin:5px;
+}
+.blue{ background:#007bff; }
+.green{ background:#28a745; }
+.yellow{ background:#ffc107; color:black; }
+.red{ background:#dc3545; }
+
+.palette-btn {width:40px;height:40px;margin:5px;border:none;border-radius:6px;}
+
+.result-card{background:white;padding:25px;border-radius:15px;max-width:1200px;margin:20px auto;}
+.score-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;}
+.score-box{background:#f8f9fc;padding:15px;border-radius:10px;text-align:center;}
+
+/* ✅ PERFECT CHART ALIGNMENT */
+.chart-container{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+margin-top:20px;
+}
+
+.chart-box{
+height:320px;
+background:#fff;
+padding:15px;
+border-radius:12px;
+box-shadow:0 2px 8px rgba(0,0,0,0.1);
+display:flex;
+align-items:center;
+justify-content:center;
+transition:0.3s;
+}
+.chart-box:hover{
+transform:scale(1.02);
+}
+
+.review-box{padding:12px;margin:10px 0;border-radius:8px;}
+.correct-bg{ background:#d4edda; }
+.wrong-bg{ background:#f8d7da; }
+.unattempted-bg{ background:#fff3cd; }
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="login-container">
+<div class="login-box">
+<h2>O Level - CBT Login</h2>
+<input id="user" placeholder="Enter Name"><br><br>
+<input id="pass" placeholder="Enter Mobile"><br><br>
+<button class="btn blue" onclick="loginUser()">Start Exam</button>
+<p id="loginMsg"></p>
+</div>
+</div>
+
+<!-- EXAM -->
+<div id="exam" style="display:none;">
+<div class="header">
+<div>O level - CBT Examination Portal</div>
+<div id="timer"></div>
+</div>
+
+<div class="container">
+<div class="left"><div id="palette"></div></div>
+
+<div class="right">
+<h4 id="counter"></h4>
+<h3 id="question"></h3>
+<div id="options"></div>
+
+<div>
+<button class="btn blue" onclick="prev()">Prev</button>
+<button class="btn green" onclick="saveAndNext()">Next</button>
+<button class="btn yellow" onclick="markReview()">Mark Review</button>
+<button class="btn yellow" onclick="clearAnswer()">Clear</button>
+<button class="btn red" onclick="confirmSubmit()">Submit</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- RESULT -->
+<div id="result" style="display:none;">
+<div class="header">
+<div>
+📊 Result Dashboard<br>
+<small id="studentInfo"></small>
+</div>
+<button class="btn green" onclick="downloadPDF()">Download PDF</button>
+</div>
+
+<div id="resultContent" class="result-card">
+
+<div class="score-grid">
+<div class="score-box">Total<br><b id="tTotal"></b></div>
+<div class="score-box">Correct<br><b id="tCorrect"></b></div>
+<div class="score-box">Wrong<br><b id="tWrong"></b></div>
+<div class="score-box">Not Attempted<br><b id="tUnattempted"></b></div>
+<div class="score-box">Score<br><b id="tScore"></b></div>
+</div>
+
+<!-- ✅ CHARTS TOGETHER -->
+<div class="chart-container">
+  <div class="chart-box">
+    <canvas id="pieChart"></canvas>
+  </div>
+  <div class="chart-box">
+    <canvas id="barChart"></canvas>
+  </div>
+</div>
+
+<h3>📝 Question Review</h3>
+<div id="review"></div>
+
+</div>
+</div>
+
+<script>
+
+/* Basic HTML questions */
+const questions = const questions = [
+  {q:"What does HTML stand for?", options:["Hyper Text Markup Language","Home Tool Markup Language","Hyperlinks and Text Markup Language","Hyper Text Making Language"], ans:0},
+  {q:"Who is credited with inventing HTML?", options:["Tim Berners-Lee","Guido van Rossum","Dennis Ritchie","James Gosling"], ans:0},
+  {q:"Which tag is used to declare the document type in HTML5?", options:["<DOCTYPE html>","<!DOCTYPE html>","<doctype>","<!doctype html5>"], ans:1},
+  {q:"What is the correct structure of an HTML document?", options:["<html><body><head></html>","<html><head></head><body></body></html>","<head><html><body></body>","<body><head><html></html>"], ans:1},
+  {q:"Which element is used to define the title of an HTML page?", options:["<meta>","<title>","<head>","<header>"], ans:1},
+  {q:"Where does the <title> tag appear in HTML?", options:["Inside <body>","Inside <head>","Inside <footer>","Inside <div>"], ans:1},
+  {q:"Which tag is used to underline text?", options:["<ul>","<under>","<u>","<line>"], ans:2},
+  {q:"What is the purpose of the <div> tag?", options:["To create a division or section","To create a list","To add an image","To add a hyperlink"], ans:0},
+  {q:"Which tag represents strikethrough text?", options:["<strike>","<s>","<del>","All of the above"], ans:3},
+  {q:"What is the correct syntax for an anchor tag?", options:["<a src='url'>link</a>","<a href='url'>link</a>","<link href='url'>","<a ref='url'>"], ans:1},
+  {q:"Which attribute is used to open a link in a new tab?", options:["target='_new'","target='_self'","target='_blank'","target='_top'"], ans:2},
+  {q:"Which attribute provides alternative text for an image?", options:["title","src","alt","href"], ans:2},
+  {q:"How do you write a comment in HTML?", options:["< ! comment ! >","// comment","<!-- comment -->","/* comment */"], ans:2},
+  {q:"Which attribute is used to merge cells horizontally?", options:["rowspan","merge","colspan","span"], ans:2},
+  {q:"What does cellpadding do?", options:["Space between cells","Border thickness","Space inside cells","Table width"], ans:2},
+  {q:"Which tag is used to create an unordered list?", options:["<ol>","<li>","<ul>","<list>"], ans:2},
+  {q:"In definition list, which tag represents a term?", options:["<dd>","<dl>","<df>","<dt>"], ans:3},
+  {q:"What does <th> stand for?", options:["Table Heading","Table Hyperlink","Table Header","Table Highlight"], ans:2},
+  {q:"Which tag is used for superscript?", options:["<super>","<up>","<exponent>","<sup>"], ans:3},
+  {q:"What is the default target of an anchor tag?", options:["_blank","_parent","_top","_self"], ans:3},
+  {q:"What is the purpose of <tfoot>?", options:["Table footer","Table header","Table body","Table summary"], ans:0},
+  {q:"How do you create a square bullet in unordered list?", options:["<ul bullet='square'>","<ul style='square'>","<ul type='square'>","<ul list='square'>"], ans:2},
+  {q:"Which meta tag is used for responsive design?", options:["responsive","scale","device-width","viewport"], ans:3},
+  {q:"What is the root element of an HTML page?", options:["<body>","<head>","<root>","<html>"], ans:3},
+  {q:"Which attribute aligns content in a table cell?", options:["valign","text-align","Both align and valign","align"], ans:2},
+  {q:"Which attribute reverses the order of an ordered list?", options:["reverse","desc","order='reverse'","reversed"], ans:3},
+  {q:"What is the difference between <b> and <strong>?", options:["No difference","<strong> is italic","<b> is deprecated","<b> is bold, <strong> is semantic for importance"], ans:3},
+  {q:"Which tag creates a horizontal rule?", options:["<line>","<rule>","<br>","<hr>"], ans:3},
+  {q:"What does rowspan do?", options:["Merges two columns","Adds a row","Merges two rows","Deletes a row"], ans:2},
+  {q:"Which tag is used to embed JavaScript?", options:["<js>","<javascript>","<code>","<script>"], ans:3},
+  {q:"How do you make an image act as a link?", options:["Use image-link attribute","Use href in <img>","Use src in <a>","Wrap <img> inside <a>"], ans:3},
+  {q:"What is the default bullet type for unordered list?", options:["circle","square","none","disc"], ans:3},
+  {q:"Which tag is used to highlight text?", options:["<highlight>","<bg>","<yellow>","<mark>"], ans:3},
+  {q:"What does cellspacing do?", options:["Space inside cells","Border color","Table height","Space between cells"], ans:3},
+  {q:"How do you create an email link?", options:["<a email='email@example.com'>","<mail to='email'>","<a href='email'>","<a href='mailto:email@example.com'>"], ans:3},
+  {q:"Which browser is developed by Google?", options:["Firefox","Safari","Edge","Chrome"], ans:3},
+  {q:"Which tag is used to define the base URL for relative links?", options:["<root>","<url>","<href>","<base>"], ans:3},
+  {q:"How do you create a numbered list with uppercase roman numerals?", options:["<ol type='i'>","<ol numeral='roman'>","<ol style='roman'>","<ol type='I'>"], ans:3},
+  {q:"How many levels of headings are available in HTML?", options:["5","4","3","6"], ans:3},
+  {q:"Which tag groups the header content in a table?", options:["<tfoot>","<tbody>","<header>","<thead>"], ans:3},
+  {q:"Which tag is used for inserted text?", options:["<add>","<new>","<insert>","<ins>"], ans:3},
+  {q:"What is a named anchor?", options:["A link that opens in a new tab","A link to an email","A link to an image","A link that jumps to a specific section of a page"], ans:3},
+  {q:"Which attribute specifies the image URL?", options:["href","link","url","src"], ans:3},
+  {q:"What does the border attribute do?", options:["Sets table color","Sets table width","Sets table height","Sets table border thickness"], ans:3},
+  {q:"Can lists be nested inside other lists?", options:["No","Only ordered inside unordered","Only unordered inside ordered","Yes"], ans:3},
+  {q:"What does the charset attribute in <meta> specify?", options:["Font set","Text encoding","Character set","Character encoding"], ans:3},
+  {q:"What does W3C stand for?", options:["Web World Consortium","World Web Consortium","Wide Web Consortium","World Wide Web Consortium"], ans:3},
+  {q:"Which tag is used to define a block of quoted text?", options:["<quote>","<q>","<cite>","<blockquote>"], ans:3},
+  {q:"What does colspan='2' do?", options:["Merges two rows","Adds two columns","Adds two rows","Merges two columns"], ans:3},
+  {q:"How do you link to a specific section named 'contact' on the same page?", options:["<a href='contact'>","<a link='#contact'>","<a section='contact'>","<a href='#contact'>"], ans:3},
+  {q:"Which tag creates a line break?", options:["<break>","<lb>","<hr>","<br>"], ans:3},
+  {q:"Which tag is used to embed CSS styles internally?", options:["<css>","<link>","<script>","<style>"], ans:3},
+  {q:"What is the purpose of <caption> tag?", options:["Table header","Table footer","Table body","Table title"], ans:3},
+  {q:"Which attribute starts an ordered list from number 5?", options:["begin='5'","value='5'","from='5'","start='5'"], ans:3},
+  {q:"What does the <pre> tag preserve?", options:["Only spaces","Only line breaks","Text color","Spaces and line breaks"], ans:3},
+  {q:"Which attribute provides tooltip text on image hover?", options:["alt","tooltip","hover","title"], ans:3},
+  {q:"What is the correct file extension for HTML files?", options:[".htm",".hml","Both .html and .htm",".html"], ans:2},
+  {q:"Which tag is used to create a table row?", options:["<td>","<th>","一tal","<tr>"], ans:3},
+  {q:"What is the purpose of 'download' attribute in <a>?", options:["Download link","Download page","Open download dialog","Download linked file"], ans:3},
+  {q:"Which tag makes text bold in HTML?", options:["<strong>","<m>","<bold>","<b>"], ans:3},
+  {q:"In definition list, which tag represents the definition?", options:["<dt>","<dl>","<df>","<dd>"], ans:3},
+  {q:"Which tag links an external CSS file?", options:["<css>","<style>","<script>","<link>"], ans:3},
+  {q:"What does <td> stand for?", options:["Table Display","Table Division","Table Description","Table Data"], ans:3},
+  {q:"Which tag is used for deleted text?", options:["<ins>","<s>","<strike>","<del>"], ans:3},
+  {q:"What is the purpose of the <p> tag?", options:["Preformatted text","Line break","Horizontal rule","Paragraph"], ans:3},
+  {q:"Can you use colspan and rowspan together?", options:["No","Only with CSS","Only in HTML5","Yes"], ans:3},
+  {q:"What does the <a> tag stand for?", options:["Link","Hyperlink","Address","Anchor"], ans:3},
+  {q:"Which tag is used for subscript?", options:["<subs>","<down>","<subscript>","<sub>"], ans:3},
+  {q:"What is a definition list?", options:["<dt> only","<dd> only","<dl> only","All three: <dl>, <dt>, <dd>"], ans:3},
+  {q:"Which tag contains the visible content of a webpage?", options:["<head>","<html>","<title>","<body>"], ans:3},
+  {q:"How do you set the width of a table?", options:["size attribute","length attribute","border attribute","width attribute"], ans:3},
+  {q:"What is the purpose of the <title> tag?", options:["Display heading","Show tooltip","Define header","Set page title in browser tab"], ans:3},
+  {q:"Which tag makes text italic?", options:["<it>","<italic>","<em>","<i>"], ans:3},
+  {q:"Which tag defines a table header cell?", options:["<td>","<tr>","<thead>","<th>"], ans:3},
+  {q:"What is the difference between absolute and relative URL?", options:["Relative has full address","Both are same","Absolute is always https","Absolute has full address, relative has partial"], ans:3},
+  {q:"Which tag is used to create an ordered list?", options:["<ul>","<li>","<list>","<ol>"], ans:3},
+  {q:"What happens if you set cellspacing to 0?", options:["Double border","Collapsed border","Hidden border","No space between cells"], ans:3},
+  {q:"What is the purpose of the <address> tag?", options:["Add email","Add phone","Add link","Define contact information"], ans:3},
+  {q:"Which tag is used to provide metadata about the HTML document?", options:["<data>","<info>","<metadata>","<meta>"], ans:3},
+  {q:"How do you set the height of a table?", options:["size attribute","length attribute","border attribute","height attribute"], ans:3},
+  {q:"Are HTML comments visible to the user?", options:["Yes","Only in source code","Both visible and in source","No"], ans:3},
+  {q:"Which tag defines a list item?", options:["<item>","<list>","<ul>","<li>"], ans:3},
+  {q:"What does the <small> tag do?", options:["Makes text larger","Makes text bold","Makes text italic","Makes text smaller"], ans:3},
+  {q:"Which attribute adds space inside table cells?", options:["cellspacing","padding","innerpadding","cellpadding"], ans:3},
+  {q:"What does the target='_top' do?", options:["Open in new tab","Open in parent frame","Open in same frame","Open in full body window"], ans:3},
+  {q:"Which tag is used to insert an image in HTML?", options:["<pic>","<src>","<image>","<img>"], ans:3},
+  {q:"What is the latest version of HTML?", options:["HTML4","XHTML","HTML6","HTML5"], ans:3},
+  {q:"Can we nest tables in HTML?", options:["No","Only in HTML5","Only with CSS","Yes"], ans:3},
+  {q:"Which attribute changes the bullet style in unordered list?", options:["style","bullet","list-style","type"], ans:3},
+  {q:"What is the purpose of the viewport meta tag?", options:["Set font size","Set background","Control page scaling on mobile","Set color"], ans:2},
+  {q:"Which tag represents a citation?", options:["<c>","<cite>","<ref>","<quotation>"], ans:1},
+  {q:"How to open a link in the same frame?", options:["target='_blank'","target='_parent'","target='_top'","target='_self'"], ans:3},
+  {q:"Which tag is used to create an HTML form?", options:["<input>","<fieldset>","<body>","<form>"], ans:3},
+  {q:"Which method sends form data in the HTTP request body?", options:["GET","PUT","HEAD","POST"], ans:3},
+  {q:"What is the purpose of the 'action' attribute in a form?", options:["How to send form data","Form name","Form validation","Where to send form data"], ans:3},
+  {q:"Which input type creates a password field?", options:["pass","text","hidden","password"], ans:3},
+  {q:"Which tag creates a multi-line text input?", options:["<input multiline>","<textfield>","<textbox>","<textarea>"], ans:3},
+  {q:"Which tag creates a dropdown list?", options:["<dropdown>","<list>","<option>","<select>"], ans:3},
+  {q:"How to preselect an option in dropdown?", options:["checked attribute","default attribute","preselect attribute","selected attribute"], ans:3},
+  {q:"Which input type creates radio buttons?", options:["option","select","check","radio"], ans:3},
+  {q:"How to group radio buttons so only one can be selected?", options:["Same id attribute","Same class","Same value","Same name attribute"], ans:3},
+  {q:"Which input type creates checkboxes?", options:["check","tick","box","checkbox"], ans:3},
+  {q:"Which button resets all form fields to default values?", options:["submit","button","clear","reset"], ans:3}
+];
+
+let index=0;
+let answers=new Array(questions.length).fill(undefined);
+let status=new Array(questions.length).fill("notVisited");
+let time=3600,timerInterval;
+
+/* LOGIN */
+function loginUser(){
+let name=user.value.trim();
+let mobile=pass.value.trim();
+
+if(name.length<2){ loginMsg.innerText="Enter valid name"; return;}
+if(!/^\d{10}$/.test(mobile)){ loginMsg.innerText="Enter valid mobile"; return;}
+
+window.studentName=name;
+
+login.style.display="none";
+exam.style.display="block";
+
+startTimer();
+loadQ();
+}
+
+/* TIMER */
+function startTimer(){
+timerInterval=setInterval(()=>{
+time--;
+let m=Math.floor(time/60);
+let s=time%60;
+timer.innerText=`Time: ${m}:${s.toString().padStart(2,'0')}`;
+if(time<=0) submitExam();
+},1000);
+}
+
+/* LOAD */
+function loadQ(){
+if(status[index]==="notVisited") status[index]="notAnswered";
+
+let q=questions[index];
+question.innerText=(index+1)+". "+q.q;
+
+let html="";
+q.options.forEach(opt=>{
+let checked=(answers[index]===opt)?"checked":"";
+html+=`<label class="option">
+<input type="radio" name="q${index}" ${checked}
+onchange="selectOption('${opt}')"> ${opt}
+</label>`;
+});
+options.innerHTML=html;
+
+updateCounter();
+loadPalette();
+}
+
+function selectOption(val){ answers[index]=val; status[index]="answered"; loadPalette(); }
+function prev(){ if(index>0){index--; loadQ();}}
+function saveAndNext(){ if(index<questions.length-1){index++; loadQ();}}
+function clearAnswer(){ answers[index]=undefined; status[index]="notAnswered"; loadQ(); }
+function markReview(){ status[index]="review"; loadPalette(); }
+
+function updateCounter(){
+counter.innerText=`Answered: ${answers.filter(a=>a!==undefined).length}/${questions.length}`;
+}
+
+function loadPalette(){
+let html="";
+for(let i=0;i<questions.length;i++){
+let color="#ccc";
+if(status[i]=="answered") color="green";
+else if(status[i]=="notAnswered") color="red";
+else if(status[i]=="review") color="orange";
+
+html+=`<button class="palette-btn" style="background:${color}" onclick="goTo(${i})">${i+1}</button>`;
+}
+palette.innerHTML=html;
+}
+
+function goTo(i){ index=i; loadQ(); }
+function confirmSubmit(){ if(confirm("Submit exam?")) submitExam(); }
+
+/* RESULT */
+function submitExam(){
+clearInterval(timerInterval);
+
+exam.style.display="none";
+result.style.display="block";
+
+/* HEADER INFO */
+let now=new Date();
+studentInfo.innerText=`Name: ${window.studentName} | Date: ${now.toLocaleDateString()} | Time: ${now.toLocaleTimeString()}`;
+
+let correct=0,wrong=0,unattempted=0;
+
+questions.forEach((q,i)=>{
+if(answers[i]===undefined) unattempted++;
+else if(answers[i]===q.options[q.ans]) correct++;
+else wrong++;
+});
+
+tTotal.innerText=questions.length;
+tCorrect.innerText=correct;
+tWrong.innerText=wrong;
+tUnattempted.innerText=unattempted;
+tScore.innerText=((correct/questions.length)*100).toFixed(1)+"%";
+
+/* ✅ PERFECT CHARTS */
+new Chart(pieChart,{
+type:"pie",
+data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]},
+options:{responsive:true,maintainAspectRatio:false}
+});
+
+new Chart(barChart,{
+type:"bar",
+data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]},
+options:{responsive:true,maintainAspectRatio:false}
+});
+
+generateReview();
+}
+
+/* REVIEW */
+function generateReview(){
+let html="";
+questions.forEach((q,i)=>{
+let bg="unattempted-bg";
+if(answers[i]===q.options[q.ans]) bg="correct-bg";
+else if(answers[i]!==undefined) bg="wrong-bg";
+
+html+=`<div class="review-box ${bg}">
+<b>Q${i+1}: ${q.q}</b><br>`;
+q.options.forEach(opt=>{
+let style="";
+if(opt===q.options[q.ans]) style="color:green;font-weight:bold;";
+if(opt===answers[i] && opt!==q.options[q.ans]) style="color:red;";
+html+=`<div style="${style}">${opt}</div>`;
+});
+html+="</div>";
+});
+review.innerHTML=html;
+}
+
+/* PDF */
+async function downloadPDF(){
+const { jsPDF } = window.jspdf;
+
+const pdf = new jsPDF('p','mm','a4');
+let y = 10;
+
+/* HEADER */
+let now = new Date();
+pdf.setFontSize(12);
+pdf.text(`Name: ${window.studentName}`,10,y);
+y+=6;
+pdf.text(`Date: ${now.toLocaleDateString()}`,10,y);
+y+=6;
+pdf.text(`Time: ${now.toLocaleTimeString()}`,10,y);
+y+=10;
+
+/* SUMMARY */
+pdf.text(`Total: ${questions.length}`,10,y); y+=6;
+pdf.text(`Correct: ${tCorrect.innerText}`,10,y); y+=6;
+pdf.text(`Wrong: ${tWrong.innerText}`,10,y); y+=6;
+pdf.text(`Not Attempted: ${tUnattempted.innerText}`,10,y); y+=6;
+pdf.text(`Score: ${tScore.innerText}`,10,y); y+=10;
+
+/* QUESTIONS */
+questions.forEach((q,i)=>{
+let text = `Q${i+1}: ${q.q}`;
+let splitQ = pdf.splitTextToSize(text, 180);
+
+if(y > 270){ pdf.addPage(); y=10; }
+pdf.text(splitQ,10,y);
+y += splitQ.length * 6;
+
+/* OPTIONS */
+q.options.forEach((opt,idx)=>{
+let label = "";
+
+if(idx === q.ans){
+label = `✔ ${opt}`; // correct
+}else if(opt === answers[i]){
+label = `✘ ${opt}`; // wrong selected
+}else{
+label = `- ${opt}`;
+}
+
+let splitOpt = pdf.splitTextToSize(label, 170);
+
+if(y > 270){ pdf.addPage(); y=10; }
+pdf.text(splitOpt,15,y);
+y += splitOpt.length * 5;
+});
+
+y+=4;
+});
+
+pdf.save("Full_Result.pdf");
+}
+
+</script>
+
+</body>
+</html>

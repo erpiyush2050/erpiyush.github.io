@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>O level - CBT Exam</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body { margin:0; font-family:Arial; background:#f4f6f8; }
+
+.login-container{
+height:100vh; display:flex; justify-content:center; align-items:center;
+background:linear-gradient(135deg,#007bff,#00c6ff);
+}
+.login-box{
+background:white; padding:40px; border-radius:15px; width:300px;
+box-shadow:0 10px 25px rgba(0,0,0,0.2); text-align:center;
+}
+
+.header {
+background:#1a73e8;color:white;padding:15px;
+display:flex;justify-content:space-between;align-items:center;
+}
+
+.container { display:flex; height:85vh; }
+.left { width:20%; background:#fff; padding:10px; overflow:auto; }
+.right { width:80%; padding:20px; }
+
+.option {
+display:block;padding:12px;margin:8px 0;background:#eee;border-radius:8px;cursor:pointer;
+}
+
+.btn{
+padding:10px 18px;border:none;border-radius:8px;color:white;font-weight:bold;cursor:pointer;margin:5px;
+}
+.blue{ background:#007bff; }
+.green{ background:#28a745; }
+.yellow{ background:#ffc107; color:black; }
+.red{ background:#dc3545; }
+
+.palette-btn {width:40px;height:40px;margin:5px;border:none;border-radius:6px;}
+
+.result-card{background:white;padding:25px;border-radius:15px;max-width:1200px;margin:20px auto;}
+.score-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;}
+.score-box{background:#f8f9fc;padding:15px;border-radius:10px;text-align:center;}
+
+/* ✅ PERFECT CHART ALIGNMENT */
+.chart-container{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+margin-top:20px;
+}
+
+.chart-box{
+height:320px;
+background:#fff;
+padding:15px;
+border-radius:12px;
+box-shadow:0 2px 8px rgba(0,0,0,0.1);
+display:flex;
+align-items:center;
+justify-content:center;
+transition:0.3s;
+}
+.chart-box:hover{
+transform:scale(1.02);
+}
+
+.review-box{padding:12px;margin:10px 0;border-radius:8px;}
+.correct-bg{ background:#d4edda; }
+.wrong-bg{ background:#f8d7da; }
+.unattempted-bg{ background:#fff3cd; }
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="login-container">
+<div class="login-box">
+<h2>O Level - CBT Login</h2>
+<input id="user" placeholder="Enter Name"><br><br>
+<input id="pass" placeholder="Enter Mobile"><br><br>
+<button class="btn blue" onclick="loginUser()">Start Exam</button>
+<p id="loginMsg"></p>
+</div>
+</div>
+
+<!-- EXAM -->
+<div id="exam" style="display:none;">
+<div class="header">
+<div>O level - CBT Examination Portal</div>
+<div id="timer"></div>
+</div>
+
+<div class="container">
+<div class="left"><div id="palette"></div></div>
+
+<div class="right">
+<h4 id="counter"></h4>
+<h3 id="question"></h3>
+<div id="options"></div>
+
+<div>
+<button class="btn blue" onclick="prev()">Prev</button>
+<button class="btn green" onclick="saveAndNext()">Next</button>
+<button class="btn yellow" onclick="markReview()">Mark Review</button>
+<button class="btn yellow" onclick="clearAnswer()">Clear</button>
+<button class="btn red" onclick="confirmSubmit()">Submit</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- RESULT -->
+<div id="result" style="display:none;">
+<div class="header">
+<div>
+📊 Result Dashboard<br>
+<small id="studentInfo"></small>
+</div>
+<button class="btn green" onclick="downloadPDF()">Download PDF</button>
+</div>
+
+<div id="resultContent" class="result-card">
+
+<div class="score-grid">
+<div class="score-box">Total<br><b id="tTotal"></b></div>
+<div class="score-box">Correct<br><b id="tCorrect"></b></div>
+<div class="score-box">Wrong<br><b id="tWrong"></b></div>
+<div class="score-box">Not Attempted<br><b id="tUnattempted"></b></div>
+<div class="score-box">Score<br><b id="tScore"></b></div>
+</div>
+
+<!-- ✅ CHARTS TOGETHER -->
+<div class="chart-container">
+  <div class="chart-box">
+    <canvas id="pieChart"></canvas>
+  </div>
+  <div class="chart-box">
+    <canvas id="barChart"></canvas>
+  </div>
+</div>
+
+<h3>📝 Question Review</h3>
+<div id="review"></div>
+
+</div>
+</div>
+
+<script>
+
+/* Basic HTML questions */
+const questions = const questions = [
+  {q:"Which button submits the form data?", options:["reset","button","send","submit"], ans:3},
+  {q:"What is the default type of <input>?", options:["button","submit","hidden","text"], ans:3},
+  {q:"Which input type creates a file upload control?", options:["upload","image","attach","file"], ans:3},
+  {q:"Which attribute is used to give a name to form element?", options:["id","value","label","name"], ans:3},
+  {q:"Which attribute provides a hint to fill the input field?", options:["hint","tooltip","title","placeholder"], ans:3},
+  {q:"Which attribute makes an input field read-only?", options:["disabled","read","enabled","readonly"], ans:3},
+  {q:"Which attribute makes a field mandatory?", options:["mandatory","must","validate","required"], ans:3},
+  {q:"Which attribute defines a regular expression pattern?", options:["regex","validate","match","pattern"], ans:3},
+  {q:"Which attribute gives focus to an input field on page load?", options:["focus","autoselect","defaultfocus","autofocus"], ans:3},
+  {q:"Which input type is specifically for email addresses?", options:["text","mail","emailid","email"], ans:3},
+  {q:"Which input type is for numeric values?", options:["numeric","int","digit","number"], ans:3},
+  {q:"Which input type displays a date picker?", options:["calendar","datetime","pickdate","date"], ans:3},
+  {q:"Which input type creates a slider control?", options:["slider","scale","scroll","range"], ans:3},
+  {q:"Which input type is for URLs?", options:["link","website","http","url"], ans:3},
+  {q:"What is the purpose of <fieldset> tag?", options:["Set form fields","Create border","Add legend","Group related form elements"], ans:3},
+  {q:"What is the purpose of <legend> tag?", options:["Legend for form","Title for input","Label for button","Caption for fieldset"], ans:3},
+  {q:"Which attribute associates a label with an input?", options:["id","name","label","for"], ans:3},
+  {q:"What pattern matches a 10-digit mobile number?", options:["[0-9]{5}","[0-9]{8}","[0-9]{12}","[0-9]{10}"], ans:3},
+  {q:"How to disable HTML5 form validation?", options:["novalidate='true'","validate='false'","formnovalidate","novalidate attribute"], ans:3},
+  {q:"Which attribute sets the minimum value for a number input?", options:["minimum","minval","low","min"], ans:3},
+  {q:"How to allow multiple file uploads?", options:["multi attribute","many attribute","several attribute","multiple attribute"], ans:3},
+  {q:"How to restrict file types in file upload?", options:["type attribute","extension attribute","allow attribute","accept attribute"], ans:3},
+  {q:"What is the default value for method attribute?", options:["POST","PUT","DELETE","GET"], ans:3},
+  {q:"When to use enctype='multipart/form-data'?", options:["Text data","Numbers","Passwords","File upload"], ans:3},
+  {q:"Which input type creates a search field?", options:["find","query","lookup","search"], ans:3},
+  {q:"Which input type creates a button?", options:["click","press","btn","button"], ans:3},
+  {q:"What is the purpose of <datalist> tag?", options:["Create dropdown","Store data","List options","Provide autocomplete suggestions"], ans:3},
+  {q:"Which attribute links an input to a datalist?", options:["datalist","suggest","options","list"], ans:3},
+  {q:"What does the 'formaction' attribute do?", options:["Set form action","Get form action","Delete form action","Override form action for a button"], ans:3},
+  {q:"What is the purpose of the 'autocomplete' attribute?", options:["Enable auto submit","Enable auto reset","Enable auto correct","Enable/disable autofill"], ans:3},
+  {q:"What is the purpose of <output> tag?", options:["Output text","Display error","Show message","Display result of calculation"], ans:3},
+  {q:"How to make a form field not editable?", options:["disabled","lock","static","readonly"], ans:3},
+  {q:"Which CSS pseudo-class targets invalid inputs?", options:[":error",":wrong",":bad",":invalid"], ans:3},
+  {q:"Which JavaScript method checks form validity?", options:["validate()","isValid()","check()","checkValidity()"], ans:3},
+  {q:"Which JavaScript method sets custom validation message?", options:["setMessage()","customMessage()","setValidity()","setCustomValidity()"], ans:3},
+  {q:"What does the 'value' attribute specify in input?", options:["Label","Placeholder","Name","Default value"], ans:3},
+  {q:"What is the difference between readonly and disabled?", options:["Both same","Disabled can be submitted","Readonly is for text only","Readonly can be submitted, disabled cannot"], ans:3},
+  {q:"What pattern matches uppercase letters only?", options:["[a-z]+","[A-Za-z]+","[A-Z0-9]+","[A-Z]+"], ans:3},
+  {q:"Which tag is used to create a frameset?", options:["<frame>","<iframe>","<frame>","<frameset>"], ans:3},
+  {q:"Can <body> tag be used with <frameset>?", options:["Yes","Only in HTML5","Only in HTML4","No"], ans:3},
+  {q:"Which attribute divides frameset into vertical sections?", options:["rows","split","divide","cols"], ans:3},
+  {q:"What is the purpose of <frame> tag?", options:["Define frameset","Define iframe","Define window","Define individual frame"], ans:3},
+  {q:"Which attribute specifies the source URL in a frame?", options:["href","link","url","src"], ans:3},
+  {q:"What is the purpose of 'name' attribute in frame?", options:["Frame title","Frame id","Frame source","Target for links"], ans:3},
+  {q:"Which attribute prevents resizing of a frame?", options:["resize='false'","fixed","disable-resize","noresize"], ans:3},
+  {q:"What is a nested frameset?", options:["Frame inside frame","Iframe inside frameset","Multiple framesets","Frameset inside another frameset"], ans:3},
+  {q:"What does iframe stand for?", options:["Internal Frame","Internet Frame","Insert Frame","Inline Frame"], ans:3},
+  {q:"Which tag is used to embed another HTML page inside current page?", options:["<frame>","<embed>","<object>","<iframe>"], ans:3},
+  {q:"What is the purpose of 'sandbox' attribute in iframe?", options:["Sandbox content","Disable scripts","Apply security restrictions","All of the above"], ans:3},
+  {q:"Which attribute allows fullscreen in iframe?", options:["fullscreen","full","allow-screen","allowfullscreen"], ans:3},
+  {q:"How to remove the border of an iframe?", options:["border='0'","frameborder='none'","border='none'","frameborder='0'"], ans:3},
+  {q:"Which of the following is NOT a new feature in HTML5?", options:["Canvas","Audio","Video","Frameset"], ans:3},
+  {q:"Which HTML5 element represents a section of a page?", options:["<div>","<span>","<article>","<section>"], ans:3},
+  {q:"Which HTML5 element defines navigation links?", options:["<navigation>","<menu>","<link>","<nav>"], ans:3},
+  {q:"Which element defines independent content like blog post?", options:["<section>","<div>","<main>","<article>"], ans:3},
+  {q:"Which element defines content aside from main content?", options:["<side>","<sidebar>","<extra>","<aside>"], ans:3},
+  {q:"Which element defines a header for a document or section?", options:["<head>","<title>","<top>","<header>"], ans:3},
+  {q:"What is the purpose of <figure> tag?", options:["Figure out content","Display figures","Mathematical figures","Self-contained content like images"], ans:3},
+  {q:"Which tag is used to embed audio in HTML5?", options:["<sound>","<music>","<mp3>","<audio>"], ans:3},
+  {q:"Which attribute adds controls to audio player?", options:["control","player","play","controls"], ans:3},
+  {q:"Which attribute makes audio automatically play?", options:["auto","play","start","autoplay"], ans:3},
+  {q:"Which tag is used to embed video in HTML5?", options:["<media>","<movie>","<mp4>","<video>"], ans:3},
+  {q:"Which attribute displays an image before video plays?", options:["preview","thumb","image","poster"], ans:3},
+  {q:"Which element defines the main content of a document?", options:["<body>","<content>","<primary>","<main>"], ans:3},
+  {q:"Which element defines a footer for a document or section?", options:["<bottom>","<end>","<foot>","<footer>"], ans:3},
+  {q:"What does 'srcdoc' attribute in iframe do?", options:["Specify source document","Specify style document","Specify script","Specify inline HTML content"], ans:3},
+  {q:"What is the purpose of <figcaption> tag?", options:["Caption for image","Caption for table","Caption for video","Caption for figure"], ans:3},
+  {q:"Which attribute makes video loop?", options:["repeat","cycle","again","loop"], ans:3},
+  {q:"What is the purpose of the 'allow' attribute in iframe?", options:["Allow styles","Allow scripts","Allow forms","Specify feature policy"], ans:3},
+  {q:"Which tag represents a time or date?", options:["<date>","<clock>","<calendar>","<time>"], ans:3},
+  {q:"Why are framesets deprecated in HTML5?", options:["SEO issues","Usability issues","Accessibility issues","All of the above"], ans:3},
+  {q:"How to make an iframe responsive?", options:["Set width=100%","Use media query","Use CSS aspect-ratio","All of the above"], ans:3},
+  {q:"What is a typical HTML5 layout structure?", options:["header, nav, section, article, aside, footer","div only","table based","frames based"], ans:0},
+  {q:"Which audio format is supported by all modern browsers?", options:["WAV","OGG","AAC","MP3"], ans:3},
+  {q:"What pattern matches lowercase letters only?", options:["[A-Z]+","[a-zA-Z]+","[a-z0-9]+","[a-z]+"], ans:3},
+  {q:"What pattern matches alphanumeric characters?", options:["[A-Z]+","[0-9]+","[a-z]+","[A-Za-z0-9]+"], ans:3},
+  {q:"Which attribute sets the maximum value for a number input?", options:["maximum","maxval","high","max"], ans:3},
+  {q:"Which attribute sets the increment step for number input?", options:["increment","interval","gap","step"], ans:3},
+  {q:"What is the default value of autocomplete?", options:["off","true","false","on"], ans:3},
+  {q:"Which CSS pseudo-class targets valid inputs?", options:[":good",":correct",":right",":valid"], ans:3},
+  {q:"What is the purpose of the 'formnovalidate' attribute?", options:["Disable form validation","Enable validation","Reset form","Disable validation on submit button"], ans:3},
+  {q:"Which tag is used to embed external multimedia content?", options:["<embed>","<object>","Both A and B","<multimedia>"], ans:2},
+  {q:"How to embed a PDF in HTML5?", options:["<embed src='file.pdf'>","<object data='file.pdf'>","<iframe src='file.pdf'>","All of the above"], ans:3},
+  {q:"What is the purpose of CSS Flexbox in layout?", options:["Create tables","Create frames","Create responsive one-dimensional layouts","Create animations"], ans:2},
+  {q:"What is lazy loading in iframe?", options:["Load iframe immediately","Load iframe with delay","Never load iframe","Load iframe only when visible"], ans:3},
+  {q:"Which attribute enables lazy loading for iframe?", options:["lazy='true'","load='lazy'","defer","loading='lazy'"], ans:3},
+  {q:"What is the security risk of iframe?", options:["Clickjacking","XSS","CSRF","All of the above"], ans:3},
+  {q:"How to prevent clickjacking using iframe?", options:["Use sandbox","Use X-Frame-Options header","Use CSP","All of the above"], ans:3},
+  {q:"What is the viewport meta tag used for?", options:["Set font size","Set background color","Control layout on mobile devices","Set page title"], ans:2},
+  {q:"Which CSS property creates a grid layout?", options:["display: flex","display: block","display: inline","display: grid"], ans:3},
+  {q:"Which tag is used to provide multiple media sources?", options:["<src>","<media>","<file>","<source>"], ans:3},
+  {q:"What pattern matches a strong password?", options:["[A-Z]+","[0-9]+","[a-z]+","(?=.*[A-Z])(?=.*[0-9])(?=.*[a-z])"], ans:3},
+  {q:"What does the 'multiple' attribute do in email input?", options:["Allow multiple emails","Allow multiple files","Allow multiple selects","Allow multiple forms"], ans:0},
+  {q:"What is the purpose of the 'minlength' attribute?", options:["Sets maximum characters","Sets required length","Sets exact length","Sets minimum number of characters"], ans:3},
+  {q:"Which input type is for datetime-local?", options:["datetime","localdate","both","datetime-local"], ans:3},
+  {q:"What is the difference between <embed> and <object>?", options:["No difference","<embed> is older","<embed> is for images only","<object> can contain fallback content"], ans:3},
+  {q:"What is the 'sandbox' attribute value to allow scripts?", options:["allow-scripts","allow-js","enable-scripts","scripts-ok"], ans:0},
+  {q:"What does responsive web design mean?", options:["Website looks same on all devices","Website uses frames","Website loads faster","Website adapts to different screen sizes"], ans:3},
+  {q:"Which tag represents a dialog box or window?", options:["<dialog>","<popup>","<window>","<box>"], ans:0},
+  {q:"What is the 'step' attribute in number input?", options:["Step by step validation","Step wizard","Form step","Increment/decrement value"], ans:3}
+];
+
+let index=0;
+let answers=new Array(questions.length).fill(undefined);
+let status=new Array(questions.length).fill("notVisited");
+let time=3600,timerInterval;
+
+/* LOGIN */
+function loginUser(){
+let name=user.value.trim();
+let mobile=pass.value.trim();
+
+if(name.length<2){ loginMsg.innerText="Enter valid name"; return;}
+if(!/^\d{10}$/.test(mobile)){ loginMsg.innerText="Enter valid mobile"; return;}
+
+window.studentName=name;
+
+login.style.display="none";
+exam.style.display="block";
+
+startTimer();
+loadQ();
+}
+
+/* TIMER */
+function startTimer(){
+timerInterval=setInterval(()=>{
+time--;
+let m=Math.floor(time/60);
+let s=time%60;
+timer.innerText=`Time: ${m}:${s.toString().padStart(2,'0')}`;
+if(time<=0) submitExam();
+},1000);
+}
+
+/* LOAD */
+function loadQ(){
+if(status[index]==="notVisited") status[index]="notAnswered";
+
+let q=questions[index];
+question.innerText=(index+1)+". "+q.q;
+
+let html="";
+q.options.forEach(opt=>{
+let checked=(answers[index]===opt)?"checked":"";
+html+=`<label class="option">
+<input type="radio" name="q${index}" ${checked}
+onchange="selectOption('${opt}')"> ${opt}
+</label>`;
+});
+options.innerHTML=html;
+
+updateCounter();
+loadPalette();
+}
+
+function selectOption(val){ answers[index]=val; status[index]="answered"; loadPalette(); }
+function prev(){ if(index>0){index--; loadQ();}}
+function saveAndNext(){ if(index<questions.length-1){index++; loadQ();}}
+function clearAnswer(){ answers[index]=undefined; status[index]="notAnswered"; loadQ(); }
+function markReview(){ status[index]="review"; loadPalette(); }
+
+function updateCounter(){
+counter.innerText=`Answered: ${answers.filter(a=>a!==undefined).length}/${questions.length}`;
+}
+
+function loadPalette(){
+let html="";
+for(let i=0;i<questions.length;i++){
+let color="#ccc";
+if(status[i]=="answered") color="green";
+else if(status[i]=="notAnswered") color="red";
+else if(status[i]=="review") color="orange";
+
+html+=`<button class="palette-btn" style="background:${color}" onclick="goTo(${i})">${i+1}</button>`;
+}
+palette.innerHTML=html;
+}
+
+function goTo(i){ index=i; loadQ(); }
+function confirmSubmit(){ if(confirm("Submit exam?")) submitExam(); }
+
+/* RESULT */
+function submitExam(){
+clearInterval(timerInterval);
+
+exam.style.display="none";
+result.style.display="block";
+
+/* HEADER INFO */
+let now=new Date();
+studentInfo.innerText=`Name: ${window.studentName} | Date: ${now.toLocaleDateString()} | Time: ${now.toLocaleTimeString()}`;
+
+let correct=0,wrong=0,unattempted=0;
+
+questions.forEach((q,i)=>{
+if(answers[i]===undefined) unattempted++;
+else if(answers[i]===q.options[q.ans]) correct++;
+else wrong++;
+});
+
+tTotal.innerText=questions.length;
+tCorrect.innerText=correct;
+tWrong.innerText=wrong;
+tUnattempted.innerText=unattempted;
+tScore.innerText=((correct/questions.length)*100).toFixed(1)+"%";
+
+/* ✅ PERFECT CHARTS */
+new Chart(pieChart,{
+type:"pie",
+data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]},
+options:{responsive:true,maintainAspectRatio:false}
+});
+
+new Chart(barChart,{
+type:"bar",
+data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]},
+options:{responsive:true,maintainAspectRatio:false}
+});
+
+generateReview();
+}
+
+/* REVIEW */
+function generateReview(){
+let html="";
+questions.forEach((q,i)=>{
+let bg="unattempted-bg";
+if(answers[i]===q.options[q.ans]) bg="correct-bg";
+else if(answers[i]!==undefined) bg="wrong-bg";
+
+html+=`<div class="review-box ${bg}">
+<b>Q${i+1}: ${q.q}</b><br>`;
+q.options.forEach(opt=>{
+let style="";
+if(opt===q.options[q.ans]) style="color:green;font-weight:bold;";
+if(opt===answers[i] && opt!==q.options[q.ans]) style="color:red;";
+html+=`<div style="${style}">${opt}</div>`;
+});
+html+="</div>";
+});
+review.innerHTML=html;
+}
+
+/* PDF */
+async function downloadPDF(){
+const { jsPDF } = window.jspdf;
+
+const pdf = new jsPDF('p','mm','a4');
+let y = 10;
+
+/* HEADER */
+let now = new Date();
+pdf.setFontSize(12);
+pdf.text(`Name: ${window.studentName}`,10,y);
+y+=6;
+pdf.text(`Date: ${now.toLocaleDateString()}`,10,y);
+y+=6;
+pdf.text(`Time: ${now.toLocaleTimeString()}`,10,y);
+y+=10;
+
+/* SUMMARY */
+pdf.text(`Total: ${questions.length}`,10,y); y+=6;
+pdf.text(`Correct: ${tCorrect.innerText}`,10,y); y+=6;
+pdf.text(`Wrong: ${tWrong.innerText}`,10,y); y+=6;
+pdf.text(`Not Attempted: ${tUnattempted.innerText}`,10,y); y+=6;
+pdf.text(`Score: ${tScore.innerText}`,10,y); y+=10;
+
+/* QUESTIONS */
+questions.forEach((q,i)=>{
+let text = `Q${i+1}: ${q.q}`;
+let splitQ = pdf.splitTextToSize(text, 180);
+
+if(y > 270){ pdf.addPage(); y=10; }
+pdf.text(splitQ,10,y);
+y += splitQ.length * 6;
+
+/* OPTIONS */
+q.options.forEach((opt,idx)=>{
+let label = "";
+
+if(idx === q.ans){
+label = `✔ ${opt}`; // correct
+}else if(opt === answers[i]){
+label = `✘ ${opt}`; // wrong selected
+}else{
+label = `- ${opt}`;
+}
+
+let splitOpt = pdf.splitTextToSize(label, 170);
+
+if(y > 270){ pdf.addPage(); y=10; }
+pdf.text(splitOpt,15,y);
+y += splitOpt.length * 5;
+});
+
+y+=4;
+});
+
+pdf.save("Full_Result.pdf");
+}
+
+</script>
+
+</body>
+</html>
