@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>O level - CBT Exam</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body { margin:0; font-family:Arial; background:#f4f6f8; }
+
+.login-container{
+height:100vh; display:flex; justify-content:center; align-items:center;
+background:linear-gradient(135deg,#007bff,#00c6ff);
+}
+.login-box{
+background:white; padding:40px; border-radius:15px; width:300px;
+box-shadow:0 10px 25px rgba(0,0,0,0.2); text-align:center;
+}
+
+.header {
+background:#1a73e8;color:white;padding:15px;
+display:flex;justify-content:space-between;align-items:center;
+}
+
+.container { display:flex; height:85vh; }
+.left { width:20%; background:#fff; padding:10px; overflow:auto; }
+.right { width:80%; padding:20px; }
+
+.option {
+display:block;padding:12px;margin:8px 0;background:#eee;border-radius:8px;cursor:pointer;
+}
+
+.btn{
+padding:10px 18px;border:none;border-radius:8px;color:white;font-weight:bold;cursor:pointer;margin:5px;
+}
+.blue{ background:#007bff; }
+.green{ background:#28a745; }
+.yellow{ background:#ffc107; color:black; }
+.red{ background:#dc3545; }
+
+.palette-btn {width:40px;height:40px;margin:5px;border:none;border-radius:6px;}
+
+.result-card{background:white;padding:25px;border-radius:15px;max-width:1200px;margin:20px auto;}
+.score-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;}
+.score-box{background:#f8f9fc;padding:15px;border-radius:10px;text-align:center;}
+
+/* ✅ PERFECT CHART ALIGNMENT */
+.chart-container{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+margin-top:20px;
+}
+
+.chart-box{
+height:320px;
+background:#fff;
+padding:15px;
+border-radius:12px;
+box-shadow:0 2px 8px rgba(0,0,0,0.1);
+display:flex;
+align-items:center;
+justify-content:center;
+transition:0.3s;
+}
+.chart-box:hover{
+transform:scale(1.02);
+}
+
+.review-box{padding:12px;margin:10px 0;border-radius:8px;}
+.correct-bg{ background:#d4edda; }
+.wrong-bg{ background:#f8d7da; }
+.unattempted-bg{ background:#fff3cd; }
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="login-container">
+<div class="login-box">
+<h2>O Level - CBT Login</h2>
+<input id="user" placeholder="Enter Name"><br><br>
+<input id="pass" placeholder="Enter Mobile"><br><br>
+<button class="btn blue" onclick="loginUser()">Start Exam</button>
+<p id="loginMsg"></p>
+</div>
+</div>
+
+<!-- EXAM -->
+<div id="exam" style="display:none;">
+<div class="header">
+<div>CSS Part 5- CBT Examination Portal</div>
+<div id="timer"></div>
+</div>
+
+<div class="container">
+<div class="left"><div id="palette"></div></div>
+
+<div class="right">
+<h4 id="counter"></h4>
+<h3 id="question"></h3>
+<div id="options"></div>
+
+<div>
+<button class="btn blue" onclick="prev()">Prev</button>
+<button class="btn green" onclick="saveAndNext()">Next</button>
+<button class="btn yellow" onclick="markReview()">Mark Review</button>
+<button class="btn yellow" onclick="clearAnswer()">Clear</button>
+<button class="btn red" onclick="confirmSubmit()">Submit</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- RESULT -->
+<div id="result" style="display:none;">
+<div class="header">
+<div>
+📊 Result Dashboard<br>
+<small id="studentInfo"></small>
+</div>
+<button class="btn green" onclick="downloadPDF()">Download PDF</button>
+</div>
+
+<div id="resultContent" class="result-card">
+
+<div class="score-grid">
+<div class="score-box">Total<br><b id="tTotal"></b></div>
+<div class="score-box">Correct<br><b id="tCorrect"></b></div>
+<div class="score-box">Wrong<br><b id="tWrong"></b></div>
+<div class="score-box">Not Attempted<br><b id="tUnattempted"></b></div>
+<div class="score-box">Score<br><b id="tScore"></b></div>
+</div>
+
+<!-- ✅ CHARTS TOGETHER -->
+<div class="chart-container">
+  <div class="chart-box">
+    <canvas id="pieChart"></canvas>
+  </div>
+  <div class="chart-box">
+    <canvas id="barChart"></canvas>
+  </div>
+</div>
+
+<h3>📝 Question Review</h3>
+<div id="review"></div>
+
+</div>
+</div>
+
+<script>
+
+/* Basic CSS questions */
+const questions [
+  {q:"What is a CSS framework?", options:["Pre-written CSS library","CSS preprocessor","CSS compiler","CSS validator"], ans:0},
+  {q:"Which is a popular CSS framework?", options:["Bootstrap","Tailwind CSS","Foundation","All of above"], ans:3},
+  {q:"What is Bootstrap developed by?", options:["Twitter","Google","Facebook","Microsoft"], ans:0},
+  {q:"What is the default grid system in Bootstrap?", options:["12-column grid","8-column grid","16-column grid","10-column grid"], ans:0},
+  {q:"What class makes a row in Bootstrap?", options:[".row"," .container"," .col"," .grid"], ans:0},
+  {q:"What class creates a container in Bootstrap?", options:[".container"," .wrapper"," .box"," .main"], ans:0},
+  {q:"What is Tailwind CSS?", options:["Utility-first framework","Component-first framework","Object-oriented framework","Semantic framework"], ans:0},
+  {q:"How do you add margin in Tailwind CSS?", options:["m-4","margin-4","mg-4","mr-4"], ans:0},
+  {q:"How do you add padding in Tailwind CSS?", options:["p-4","pd-4","pad-4","padding-4"], ans:0},
+  {q:"What is the purpose of @apply in Tailwind?", options:["Apply utility classes to custom CSS","Apply styles","Apply variables","Apply mixins"], ans:0},
+  {q:"What is Foundation framework developed by?", options:["Zurb","Google","Twitter","Facebook"], ans:0},
+  {q:"What is Bulma CSS framework based on?", options:["Flexbox","Grid","Float","Position"], ans:0},
+  {q:"What is Materialize CSS developed by?", options:["Google","Material Design","Facebook","Twitter"], ans:0},
+  {q:"What is UIkit?", options:["Lightweight CSS framework","JavaScript library","CSS preprocessor","Build tool"], ans:0},
+  {q:"What is Semantic UI?", options:["Human-friendly CSS framework","JavaScript library","Backend framework","Database"], ans:0},
+  {q:"What is the difference between Bootstrap and Tailwind?", options:["Component vs utility","Utility vs component","Both component","Both utility"], ans:0},
+  {q:"What is CSS-in-JS used for?", options:["Scoped styles in components","Global styles","External styles","Inline styles"], ans:0},
+  {q:"What is styled-components?", options:["CSS-in-JS library","CSS preprocessor","CSS framework","CSS compiler"], ans:0},
+  {q:"How do you write styles in styled-components?", options:["styled.div` color: red; `","css` color: red; `","styles.div` color: red; `","component.div` color: red; `"], ans:0},
+  {q:"What is Emotion?", options:["CSS-in-JS library","CSS preprocessor","CSS framework","CSS compiler"], ans:0},
+  {q:"What is the purpose of CSS container queries?", options:["Style based on parent size","Style based on viewport size","Style based on device size","Style based on element size"], ans:0},
+  {q:"How do you define a container for container queries?", options:["container-type: inline-size;","display: container;","@container","container: true;"], ans:0},
+  {q:"How do you write a container query?", options:["@container (min-width: 500px) { }","@media (min-width: 500px) { }","@container-width: 500px { }","@query container (500px) { }"], ans:0},
+  {q:"What is the purpose of CSS cascade layers?", options:["Control specificity order","Control colors","Control fonts","Control layout"], ans:0},
+  {q:"How do you define a cascade layer?", options:["@layer name { }","layer name { }","@import layer(name)","@use layer(name)"], ans:0},
+  {q:"What is the order of cascade layers by default?", options:["Last layer wins","First layer wins","All layers equal","Depends on specificity"], ans:0},
+  {q:"What is the purpose of CSS scoping?", options:["Limit styles to a component","Global styles","External styles","Inline styles"], ans:0},
+  {q:"How do you use the @scope rule?", options:["@scope (.component) { }","scope(.component) { }","@scoped (.component) { }","@component (.component) { }"], ans:0},
+  {q:"What is the purpose of the :is() pseudo-class?", options:["Group selectors with higher specificity","Is selector","Group selectors","Match any selector"], ans:0},
+  {q:"What is the purpose of the :where() pseudo-class?", options:["Group selectors with zero specificity","Group selectors","Is selector","Match any selector"], ans:0},
+  {q:"What is the difference between :is() and :where()?", options:[":is() has specificity, :where() has zero","Both have specificity","Both have zero specificity","No difference"], ans:0},
+  {q:"What is the :has() pseudo-class?", options:["Select parent containing child","Select child of parent","Select sibling","Select attribute"], ans:0},
+  {q:"How do you select a div that contains a paragraph?", options:["div:has(p)","div:contains(p)","div p","p:inside(div)"], ans:0},
+  {q:"What is the color-mix() function?", options:["Mix two colors","Create gradient","Create shadow","Create transition"], ans:0},
+  {q:"How do you mix red and blue using color-mix()?", options:["color-mix(in srgb, red, blue)","mix(red, blue)","blend(red, blue)","color-blend(red, blue)"], ans:0},
+  {q:"What is the light-dark() function?", options:["Returns color based on light/dark theme","Lighten color","Darken color","Adjust brightness"], ans:0},
+  {q:"How do you use light-dark() for theme colors?", options:["color: light-dark(black, white);","color: theme(black, white);","color: dark-light(black, white);","color: mode(black, white);"], ans:0},
+  {q:"What is the accent-color property used for?", options:["Color form controls like checkbox, radio","Background color","Text color","Border color"], ans:0},
+  {q:"What is the aspect-ratio property?", options:["Sets width/height ratio","Sets width","Sets height","Sets size"], ans:0},
+  {q:"How do you create a perfect square using aspect-ratio?", options:["aspect-ratio: 1 / 1;","aspect-ratio: square;","aspect-ratio: 1;","aspect-ratio: equal;"], ans:0},
+  {q:"What is the backdrop-filter property?", options:["Apply filter behind element","Apply filter on element","Apply filter on text","Apply filter on image"], ans:0},
+  {q:"How do you create a frosted glass effect?", options:["backdrop-filter: blur(10px);","filter: blur(10px);","glass-effect: blur(10px);","background-blur: 10px;"], ans:0},
+  {q:"What is the clip-path property?", options:["Clip element to a shape","Clip background","Clip text","Clip image"], ans:0},
+  {q:"How do you create a circle using clip-path?", options:["clip-path: circle(50%);","clip-path: circle();","clip-path: round(50%);","clip-path: ellipse(50%);"], ans:0},
+  {q:"What is the shape-outside property?", options:["Wrap text around a shape","Create shape","Outline shape","Clip shape"], ans:0},
+  {q:"What is the scroll-behavior property?", options:["Smooth scrolling","Scroll speed","Scroll direction","Scroll type"], ans:0},
+  {q:"How do you enable smooth scrolling?", options:["scroll-behavior: smooth;","scroll: smooth;","smooth-scroll: true;","scrolling: smooth;"], ans:0},
+  {q:"What is the overscroll-behavior property?", options:["Control scroll chaining","Control scroll speed","Control scroll direction","Control scroll type"], ans:0},
+  {q:"What is the touch-action property?", options:["Control touch interactions","Control touch scroll","Control touch zoom","All of above"], ans:3},
+  {q:"What is the pointer-events property?", options:["Control mouse interaction","Control pointer shape","Control cursor","Control click"], ans:0},
+  {q:"How do you make an element ignore mouse events?", options:["pointer-events: none;","mouse-events: none;","click-events: none;","interaction: none;"], ans:0},
+  {q:"What is the user-select property?", options:["Control text selection","Control user input","Control user action","Control user click"], ans:0},
+  {q:"How do you disable text selection?", options:["user-select: none;","select: none;","no-select: true;","disable-select: yes;"], ans:0},
+  {q:"What is the will-change property?", options:["Performance optimization hint","Change property","Future property","Smooth transition"], ans:0},
+  {q:"How do you hint that an element will animate?", options:["will-change: transform;","future-change: transform;","prepare-change: transform;","optimize-change: transform;"], ans:0},
+  {q:"What is the contain property?", options:["Isolate rendering performance","Contain content","Contain element","Contain layout"], ans:0},
+  {q:"What is the content-visibility property?", options:["Skip rendering off-screen content","Hide content","Show content","Remove content"], ans:0},
+  {q:"How do you use content-visibility for performance?", options:["content-visibility: auto;","content-visibility: hidden;","content-visibility: visible;","content-visibility: skip;"], ans:0},
+  {q:"What is CSS Houdini?", options:["Low-level CSS API","High-level CSS API","CSS framework","CSS preprocessor"], ans:0},
+  {q:"What is the Paint API in Houdini?", options:["Custom CSS painting","Custom CSS properties","Custom CSS layout","Custom CSS animation"], ans:0},
+  {q:"What is the Layout API in Houdini?", options:["Custom CSS layout","Custom CSS painting","Custom CSS properties","Custom CSS animation"], ans:0},
+  {q:"What is the Properties & Values API in Houdini?", options:["Define custom CSS property types","Define variables","Define mixins","Define functions"], ans:0},
+  {q:"What is the Typed OM API?", options:["CSS values with types","CSS values as strings","CSS values as numbers","CSS values as colors"], ans:0},
+  {q:"What is the purpose of logical properties?", options:["Write direction-aware CSS","Write simple CSS","Write complex CSS","Write fast CSS"], ans:0},
+  {q:"What is margin-inline-start?", options:["Logical property for margin-left/right","Physical property","Inline property","Block property"], ans:0},
+  {q:"What is the difference between margin-block and margin-inline?", options:["Block for vertical, inline for horizontal","Block for horizontal, inline for vertical","Both for vertical","Both for horizontal"], ans:0},
+  {q:"What is a custom property fallback?", options:["var(--color, red)","--color: red","var(--color): red","get(--color, red)"], ans:0},
+  {q:"What is the @property rule used for?", options:["Register custom properties with types","Create properties","Define properties","Set properties"], ans:0},
+  {q:"How do you register a custom property with syntax?", options:["@property --color { syntax: '<color>'; }","--property --color { syntax: '<color>'; }","@custom --color { syntax: '<color>'; }","@var --color { syntax: '<color>'; }"], ans:0},
+  {q:"What is the media feature prefers-color-scheme?", options:["Detect light/dark theme","Detect color","Detect screen size","Detect orientation"], ans:0},
+  {q:"How do you detect dark theme preference?", options:["@media (prefers-color-scheme: dark)","@media (dark-theme: true)","@media (theme: dark)","@media (color-scheme: dark)"], ans:0},
+  {q:"What is the media feature prefers-reduced-motion?", options:["Detect motion preference","Detect motion","Detect animation","Detect transition"], ans:0},
+  {q:"How do you respect reduced motion preference?", options:["@media (prefers-reduced-motion: reduce)","@media (no-motion: true)","@media (motion: reduce)","@media (animation: none)"], ans:0},
+  {q:"What is the media feature prefers-contrast?", options:["Detect contrast preference","Detect contrast","Detect brightness","Detect color"], ans:0},
+  {q:"What is the media feature forced-colors?", options:["Detect forced colors mode","Detect forced colors","Detect high contrast","Detect color scheme"], ans:0},
+  {q:"What is the color-gamut media feature?", options:["Detect color range capability","Detect color","Detect gamut","Detect spectrum"], ans:0},
+  {q:"What is dynamic-range media feature?", options:["Detect high dynamic range","Detect dynamic range","Detect brightness","Detect contrast"], ans:0},
+  {q:"What is the environment variables in CSS?", options:["env(safe-area-inset-top)","var(safe-area)","global(safe-area)","constant(safe-area)"], ans:0},
+  {q:"What are safe area insets used for?", options:["Notch and gesture areas","Padding","Margin","Border"], ans:0},
+  {q:"What is the purpose of viewport units vh, vw, vmin, vmax?", options:["Relative to viewport size","Relative to parent","Relative to root","Relative to element"], ans:0},
+  {q:"What is the difference between svh, lvh, dvh?", options:["Small, large, dynamic viewport","Static viewport","Fixed viewport","Mobile viewport"], ans:0},
+  {q:"What is the dvh unit?", options:["Dynamic viewport height","Default viewport height","Device viewport height","Document viewport height"], ans:0},
+  {q:"What is the purpose of container query length units?", options:["cqw, cqh, cqi, cqb","vw, vh","rem, em","px, pt"], ans:0},
+  {q:"What does cqi stand for?", options:["Container query inline size","Container query index","Container query item","Container query inner"], ans:0},
+  {q:"What does cqb stand for?", options:["Container query block size","Container query base","Container query border","Container query bottom"], ans:0},
+  {q:"What is the style query in container queries?", options:["Query based on container style","Query based on container size","Query based on container position","Query based on container color"], ans:0},
+  {q:"What is the @scope rule with scope boundaries?", options:["@scope (.component) to (.content)","@scope (.component)","@scope from (.component) to (.content)","@scope (.component) { }"], ans:0},
+  {q:"What is the new CSS color function oklch()?", options:["Perceptually uniform color space","Old color space","RGB color space","HSL color space"], ans:0},
+  {q:"What is the difference between hsl() and oklch()?", options:["oklch is perceptually uniform","Both same","hsl is better","No difference"], ans:0},
+  {q:"What is the color() function with display-p3?", options:["Wide gamut color","Standard color","Old color","Basic color"], ans:0},
+  {q:"What is the relative color syntax?", options:["from keyword in color()","relative()","from-color()","color-from()"], ans:0},
+  {q:"How do you create a lighter version of a color?", options:["color: oklch(from var(--color) l c h / alpha);","color: lighten(var(--color));","color: brighter(var(--color));","color: increase-lightness(var(--color));"], ans:0}
+];
+
+let index=0;
+let answers=new Array(questions.length).fill(undefined);
+let status=new Array(questions.length).fill("notVisited");
+let time=3600,timerInterval;
+
+/* LOGIN */
+function loginUser(){
+let name=user.value.trim();
+let mobile=pass.value.trim();
+
+if(name.length<2){ loginMsg.innerText="Enter valid name"; return;}
+if(!/^\d{10}$/.test(mobile)){ loginMsg.innerText="Enter valid mobile"; return;}
+
+window.studentName=name;
+
+login.style.display="none";
+exam.style.display="block";
+
+startTimer();
+loadQ();
+}
+
+/* TIMER */
+function startTimer(){
+timerInterval=setInterval(()=>{
+time--;
+let m=Math.floor(time/60);
+let s=time%60;
+timer.innerText=`Time: ${m}:${s.toString().padStart(2,'0')}`;
+if(time<=0) submitExam();
+},1000);
+}
+
+/* LOAD */
+function loadQ(){
+if(status[index]==="notVisited") status[index]="notAnswered";
+
+let q=questions[index];
+question.innerText=(index+1)+". "+q.q;
+
+let html="";
+q.options.forEach(opt=>{
+let checked=(answers[index]===opt)?"checked":"";
+html+=`<label class="option">
+<input type="radio" name="q${index}" ${checked}
+onchange="selectOption('${opt}')"> ${opt}
+</label>`;
+});
+options.innerHTML=html;
+
+updateCounter();
+loadPalette();
+}
+
+function selectOption(val){ answers[index]=val; status[index]="answered"; loadPalette(); }
+function prev(){ if(index>0){index--; loadQ();}}
+function saveAndNext(){ if(index<questions.length-1){index++; loadQ();}}
+function clearAnswer(){ answers[index]=undefined; status[index]="notAnswered"; loadQ(); }
+function markReview(){ status[index]="review"; loadPalette(); }
+
+function updateCounter(){
+counter.innerText=`Answered: ${answers.filter(a=>a!==undefined).length}/${questions.length}`;
+}
+
+function loadPalette(){
+let html="";
+for(let i=0;i<questions.length;i++){
+let color="#ccc";
+if(status[i]=="answered") color="green";
+else if(status[i]=="notAnswered") color="red";
+else if(status[i]=="review") color="orange";
+
+html+=`<button class="palette-btn" style="background:${color}" onclick="goTo(${i})">${i+1}</button>`;
+}
+palette.innerHTML=html;
+}
+
+function goTo(i){ index=i; loadQ(); }
+function confirmSubmit(){ if(confirm("Submit exam?")) submitExam(); }
+
+/* RESULT */
+function submitExam(){
+clearInterval(timerInterval);
+
+exam.style.display="none";
+result.style.display="block";
+
+/* HEADER INFO */
+let now=new Date();
+studentInfo.innerText=`Name: ${window.studentName} | Date: ${now.toLocaleDateString()} | Time: ${now.toLocaleTimeString()}`;
+
+let correct=0,wrong=0,unattempted=0;
+
+questions.forEach((q,i)=>{
+if(answers[i]===undefined) unattempted++;
+else if(answers[i]===q.options[q.ans]) correct++;
+else wrong++;
+});
+
+tTotal.innerText=questions.length;
+tCorrect.innerText=correct;
+tWrong.innerText=wrong;
+tUnattempted.innerText=unattempted;
+tScore.innerText=((correct/questions.length)*100).toFixed(1)+"%";
+
+/* ✅ PERFECT CHARTS */
+new Chart(pieChart,{
+type:"pie",
+data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]},
+options:{responsive:true,maintainAspectRatio:false}
+});
+
+new Chart(barChart,{
+type:"bar",
+data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]},
+options:{responsive:true,maintainAspectRatio:false}
+});
+
+generateReview();
+}
+
+/* REVIEW */
+function generateReview(){
+let html="";
+questions.forEach((q,i)=>{
+let bg="unattempted-bg";
+if(answers[i]===q.options[q.ans]) bg="correct-bg";
+else if(answers[i]!==undefined) bg="wrong-bg";
+
+html+=`<div class="review-box ${bg}">
+<b>Q${i+1}: ${q.q}</b><br>`;
+q.options.forEach(opt=>{
+let style="";
+if(opt===q.options[q.ans]) style="color:green;font-weight:bold;";
+if(opt===answers[i] && opt!==q.options[q.ans]) style="color:red;";
+html+=`<div style="${style}">${opt}</div>`;
+});
+html+="</div>";
+});
+review.innerHTML=html;
+}
+
+/* PDF */
+async function downloadPDF(){
+const { jsPDF } = window.jspdf;
+
+const pdf = new jsPDF('p','mm','a4');
+let y = 10;
+
+/* HEADER */
+let now = new Date();
+pdf.setFontSize(12);
+pdf.text(`Name: ${window.studentName}`,10,y);
+y+=6;
+pdf.text(`Date: ${now.toLocaleDateString()}`,10,y);
+y+=6;
+pdf.text(`Time: ${now.toLocaleTimeString()}`,10,y);
+y+=10;
+
+/* SUMMARY */
+pdf.text(`Total: ${questions.length}`,10,y); y+=6;
+pdf.text(`Correct: ${tCorrect.innerText}`,10,y); y+=6;
+pdf.text(`Wrong: ${tWrong.innerText}`,10,y); y+=6;
+pdf.text(`Not Attempted: ${tUnattempted.innerText}`,10,y); y+=6;
+pdf.text(`Score: ${tScore.innerText}`,10,y); y+=10;
+
+/* QUESTIONS */
+questions.forEach((q,i)=>{
+let text = `Q${i+1}: ${q.q}`;
+let splitQ = pdf.splitTextToSize(text, 180);
+
+if(y > 270){ pdf.addPage(); y=10; }
+pdf.text(splitQ,10,y);
+y += splitQ.length * 6;
+
+/* OPTIONS */
+q.options.forEach((opt,idx)=>{
+let label = "";
+
+if(idx === q.ans){
+label = `✔ ${opt}`; // correct
+}else if(opt === answers[i]){
+label = `✘ ${opt}`; // wrong selected
+}else{
+label = `- ${opt}`;
+}
+
+let splitOpt = pdf.splitTextToSize(label, 170);
+
+if(y > 270){ pdf.addPage(); y=10; }
+pdf.text(splitOpt,15,y);
+y += splitOpt.length * 5;
+});
+
+y+=4;
+});
+
+pdf.save("Full_Result.pdf");
+}
+
+</script>
+
+</body>
+</html>
