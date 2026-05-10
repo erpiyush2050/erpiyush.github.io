@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>O level - CBT Exam</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body { margin:0; font-family:Arial; background:#f4f6f8; }
+
+.login-container{
+height:100vh; display:flex; justify-content:center; align-items:center;
+background:linear-gradient(135deg,#007bff,#00c6ff);
+}
+.login-box{
+background:white; padding:40px; border-radius:15px; width:300px;
+box-shadow:0 10px 25px rgba(0,0,0,0.2); text-align:center;
+}
+
+.header {
+background:#1a73e8;color:white;padding:15px;
+display:flex;justify-content:space-between;align-items:center;
+}
+
+.container { display:flex; height:85vh; }
+.left { width:20%; background:#fff; padding:10px; overflow:auto; }
+.right { width:80%; padding:20px; }
+
+.option {
+display:block;padding:12px;margin:8px 0;background:#eee;border-radius:8px;cursor:pointer;
+}
+
+.btn{
+padding:10px 18px;border:none;border-radius:8px;color:white;font-weight:bold;cursor:pointer;margin:5px;
+}
+.blue{ background:#007bff; }
+.green{ background:#28a745; }
+.yellow{ background:#ffc107; color:black; }
+.red{ background:#dc3545; }
+
+.palette-btn {width:40px;height:40px;margin:5px;border:none;border-radius:6px;}
+
+.result-card{background:white;padding:25px;border-radius:15px;max-width:1200px;margin:20px auto;}
+.score-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;}
+.score-box{background:#f8f9fc;padding:15px;border-radius:10px;text-align:center;}
+
+/* ✅ PERFECT CHART ALIGNMENT */
+.chart-container{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+margin-top:20px;
+}
+
+.chart-box{
+height:320px;
+background:#fff;
+padding:15px;
+border-radius:12px;
+box-shadow:0 2px 8px rgba(0,0,0,0.1);
+display:flex;
+align-items:center;
+justify-content:center;
+transition:0.3s;
+}
+.chart-box:hover{
+transform:scale(1.02);
+}
+
+.review-box{padding:12px;margin:10px 0;border-radius:8px;}
+.correct-bg{ background:#d4edda; }
+.wrong-bg{ background:#f8d7da; }
+.unattempted-bg{ background:#fff3cd; }
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="login-container">
+<div class="login-box">
+<h2>O Level - CBT Login</h2>
+<input id="user" placeholder="Enter Name"><br><br>
+<input id="pass" placeholder="Enter Mobile"><br><br>
+<button class="btn blue" onclick="loginUser()">Start Exam</button>
+<p id="loginMsg"></p>
+</div>
+</div>
+
+<!-- EXAM -->
+<div id="exam" style="display:none;">
+<div class="header">
+<div>Web Designing Part 2 - CBT Examination Portal</div>
+<div id="timer"></div>
+</div>
+
+<div class="container">
+<div class="left"><div id="palette"></div></div>
+
+<div class="right">
+<h4 id="counter"></h4>
+<h3 id="question"></h3>
+<div id="options"></div>
+
+<div>
+<button class="btn blue" onclick="prev()">Prev</button>
+<button class="btn green" onclick="saveAndNext()">Next</button>
+<button class="btn yellow" onclick="markReview()">Mark Review</button>
+<button class="btn yellow" onclick="clearAnswer()">Clear</button>
+<button class="btn red" onclick="confirmSubmit()">Submit</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- RESULT -->
+<div id="result" style="display:none;">
+<div class="header">
+<div>
+📊 Result Dashboard<br>
+<small id="studentInfo"></small>
+</div>
+<button class="btn green" onclick="downloadPDF()">Download PDF</button>
+</div>
+
+<div id="resultContent" class="result-card">
+
+<div class="score-grid">
+<div class="score-box">Total<br><b id="tTotal"></b></div>
+<div class="score-box">Correct<br><b id="tCorrect"></b></div>
+<div class="score-box">Wrong<br><b id="tWrong"></b></div>
+<div class="score-box">Not Attempted<br><b id="tUnattempted"></b></div>
+<div class="score-box">Score<br><b id="tScore"></b></div>
+</div>
+
+<!-- ✅ CHARTS TOGETHER -->
+<div class="chart-container">
+  <div class="chart-box">
+    <canvas id="pieChart"></canvas>
+  </div>
+  <div class="chart-box">
+    <canvas id="barChart"></canvas>
+  </div>
+</div>
+
+<h3>📝 Question Review</h3>
+<div id="review"></div>
+
+</div>
+</div>
+
+<script>
+
+/* Basic HTML questions */
+const questions = [
+  {q:"Which HTML tag is used to define an unordered list?", options:["<ol>","<ul>","<li>","<list>"], ans:1},
+  {q:"What does the <em> tag represent?", options:["Emphasized text","Italic text","Important text","Bold text"], ans:0},
+  {q:"Which attribute is used to specify the width of a table?", options:["width","size","border","cellpadding"], ans:0},
+  {q:"What is the purpose of the <thead> tag in a table?", options:["Group header content in a table","Group footer content","Group body content","Add caption"], ans:0},
+  {q:"Which tag is used to define a table footer?", options:["<tfoot>","<thead>","<tbody>","<tf>"], ans:0},
+  {q:"What does the <tbody> tag represent?", options:["Table body content","Table header","Table footer","Table caption"], ans:0},
+  {q:"Which HTML element is used to display a scalar measurement within a known range?", options:["<meter>","<progress>","<range>","<scale>"], ans:0},
+  {q:"What is the purpose of the <progress> tag?", options:["Display task progress","Display measurement","Display range","Display scale"], ans:0},
+  {q:"Which tag is used to define a client-side image map?", options:["<map>","<area>","<imgmap>","<imagemap>"], ans:0},
+  {q:"What is the purpose of the <area> tag?", options:["Define area in image map","Define region in div","Define section in page","Define zone in canvas"], ans:0},
+  {q:"Which HTML tag is used to embed external content like a PDF?", options:["<embed>","<object>","<iframe>","All of above"], ans:3},
+  {q:"What is the purpose of the <noscript> tag?", options:["Content for browsers without script support","No script","Hide script","Disable script"], ans:0},
+  {q:"Which tag is used to define the main content of an HTML document?", options:["<main>","<body>","<content>","<primary>"], ans:0},
+  {q:"What is the difference between <article> and <section>?", options:["Article is independent, section is a group","Both are same","Section is independent","Article is a group"], ans:0},
+  {q:"Which HTML5 tag is used to define navigation links?", options:["<nav>","<navigation>","<menu>","<links>"], ans:0},
+  {q:"What is the purpose of the <aside> tag?", options:["Content aside from main content","Sidebar","Related content","All of above"], ans:3},
+  {q:"Which tag is used to define a header for a document or section?", options:["<header>","<head>","<top>","<hgroup>"], ans:0},
+  {q:"What is the purpose of the <footer> tag?", options:["Footer for document or section","Bottom of page","End of content","All of above"], ans:3},
+  {q:"Which attribute is used to make an input field mandatory?", options:["required","mandatory","must","validate"], ans:0},
+  {q:"What is the purpose of the pattern attribute in input?", options:["Regular expression validation","Pattern matching","Format validation","All of above"], ans:3},
+  {q:"Which input type is used for entering a color?", options:["color","picker","colour","rgb"], ans:0},
+  {q:"What does the autofocus attribute do?", options:["Focus on element when page loads","Auto submit form","Auto reset form","Auto validate form"], ans:0},
+  {q:"Which input type creates a date picker?", options:["date","calendar","datetime","pickdate"], ans:0},
+  {q:"What is the purpose of the multiple attribute in file input?", options:["Allow multiple file selection","Allow multiple form submission","Allow multiple inputs","Allow multiple selects"], ans:0},
+  {q:"Which tag is used to group related options in a dropdown?", options:["<optgroup>","<group>","<optiongroup>","<selectgroup>"], ans:0},
+  {q:"What is the purpose of the <datalist> tag?", options:["Provide autocomplete suggestions","Create dropdown","List options","Store data"], ans:0},
+  {q:"Which attribute is used to disable an input field?", options:["disabled","readonly","enable-off","inactive"], ans:0},
+  {q:"What is the difference between readonly and disabled?", options:["Readonly can be submitted, disabled cannot","Both same","Disabled can be submitted","Readonly cannot be submitted"], ans:0},
+  {q:"Which tag is used to create a multi-line text input?", options:["<textarea>","<input multiline>","<textfield>","<textbox>"], ans:0},
+  {q:"What is the purpose of the wrap attribute in textarea?", options:["Text wrapping behavior","Text alignment","Text formatting","Text styling"], ans:0},
+  {q:"Which HTML tag is used to define a quote?", options:["<blockquote>","<quote>","<q>","Both A and C"], ans:3},
+  {q:"What is the purpose of the <cite> tag?", options:["Citation of a work","Code citation","Author name","Reference link"], ans:0},
+  {q:"Which tag is used to define computer code?", options:["<code>","<kbd>","<samp>","<var>"], ans:0},
+  {q:"What is the purpose of the <var> tag?", options:["Define variable","Define variable in math","Define variable in programming","All of above"], ans:3},
+  {q:"Which tag is used to define keyboard input?", options:["<kbd>","<key>","<input>","<keyboard>"], ans:0},
+  {q:"What is the purpose of the <samp> tag?", options:["Sample output from program","Sample text","Sample code","Sample data"], ans:0},
+  {q:"Which tag is used to define a bidirectional override?", options:["<bdo>","<bdi>","<dir>","<bd>"], ans:0},
+  {q:"What is the purpose of the <bdi> tag?", options:["Isolate text for bidirectional formatting","Bidirectional text","Direction override","Text isolation"], ans:0},
+  {q:"Which tag is used to define a ruby annotation?", options:["<ruby>","<rt>","<rp>","All of above"], ans:3},
+  {q:"What is the purpose of the <wbr> tag?", options:["Word break opportunity","Line break","Page break","Section break"], ans:0},
+  {q:"Which CSS property is used to change the background image?", options:["background-image","bg-image","image-background","background-img"], ans:0},
+  {q:"How do you repeat a background image horizontally only?", options:["background-repeat: repeat-x;","background-repeat: repeat-y;","background-repeat: repeat;","background-repeat: no-repeat;"], ans:0},
+  {q:"Which CSS property is used to set the size of a background image?", options:["background-size","bg-size","image-size","background-dimension"], ans:0},
+  {q:"What is the purpose of the background-attachment property?", options:["Fix background image","Scroll background","Move background","All of above"], ans:3},
+  {q:"Which CSS property is used to create a gradient background?", options:["background: linear-gradient()","gradient()","bg-gradient()","linear-bg()"], ans:0},
+  {q:"What is the difference between border and outline?", options:["Outline doesn't take space, border does","Both take space","Border doesn't take space","No difference"], ans:0},
+  {q:"Which CSS property is used to set the border radius for only the top-left corner?", options:["border-top-left-radius","border-radius-tl","top-left-radius","radius-tl"], ans:0},
+  {q:"How do you create a circular image using CSS?", options:["border-radius: 50%;","border-radius: 100%;","border-radius: circle;","border-radius: round;"], ans:0},
+  {q:"Which CSS property is used to add a drop shadow to an image?", options:["box-shadow","drop-shadow","image-shadow","shadow"], ans:0},
+  {q:"What is the purpose of the object-fit property?", options:["How image fits container","How image scales","How image aligns","How image crops"], ans:0},
+  {q:"Which value of object-fit makes the image cover the entire container?", options:["cover","contain","fill","scale-down"], ans:0},
+  {q:"How do you create a CSS image gallery using grid?", options:["display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));","display: flex; flex-wrap: wrap;","float: left;","All of above"], ans:3},
+  {q:"Which CSS property is used to add a hover effect to an image?", options:["transition","transform","Both A and B","animation"], ans:2},
+  {q:"How do you make an image grayscale on hover?", options:["filter: grayscale(100%);","grayscale: 100%;","image-gray: 100%;","gray-scale: 100%;"], ans:0},
+  {q:"Which CSS property is used to create a responsive image that scales with the container?", options:["max-width: 100%; height: auto;","width: 100%; height: auto;","min-width: 100%;","Both A and B"], ans:3},
+  {q:"What is the purpose of the aspect-ratio property?", options:["Set width/height ratio","Set image proportion","Set container ratio","All of above"], ans:3},
+  {q:"Which CSS property is used to control the order of flex items?", options:["order","sequence","index","flex-order"], ans:0},
+  {q:"What is the purpose of the flex-grow property?", options:["Growth factor of flex item","Shrink factor","Base size","Order"], ans:0},
+  {q:"Which property is used to set the gap between flex items?", options:["gap","flex-gap","item-gap","space"], ans:0},
+  {q:"What is the difference between justify-content and align-items in flexbox?", options:["Justify-content for main axis, align-items for cross axis","Both for main axis","Both for cross axis","No difference"], ans:0},
+  {q:"Which CSS property is used to wrap flex items to the next line?", options:["flex-wrap","wrap","flex-flow","flex-direction"], ans:0},
+  {q:"What is the purpose of the align-self property?", options:["Override align-items for a single item","Align all items","Align container","Align parent"], ans:0},
+  {q:"How do you center a flex item both horizontally and vertically?", options:["justify-content: center; align-items: center;","text-align: center; vertical-align: middle;","align: center; justify: center;","place-items: center;"], ans:0},
+  {q:"Which CSS property is used to create a CSS grid with named areas?", options:["grid-template-areas","grid-areas","areas","grid-template"], ans:0},
+  {q:"How do you place an item in a specific grid area?", options:["grid-area: name;","grid-column: name;","grid-row: name;","place-item: name;"], ans:0},
+  {q:"What is the purpose of the minmax() function in grid?", options:["Set min and max track size","Set minimum size","Set maximum size","Set both sizes"], ans:0},
+  {q:"What does auto-fill do in CSS Grid?", options:["Creates as many tracks as fit","Fills automatically","Auto creates tracks","Auto generates tracks"], ans:0},
+  {q:"Which CSS property is used to create a sticky header?", options:["position: sticky; top: 0;","position: fixed; top: 0;","position: relative; top: 0;","position: absolute; top: 0;"], ans:0},
+  {q:"What is the purpose of the will-change property?", options:["Performance optimization hint","Change property","Future property","Smooth transition"], ans:0},
+  {q:"How do you create a CSS variable that is accessible globally?", options:[":root { --color: red; }","html { --color: red; }","body { --color: red; }","global { --color: red; }"], ans:0},
+  {q:"What is the purpose of the var() function?", options:["Use CSS variable value","Declare variable","Change variable","Remove variable"], ans:0},
+  {q:"How do you provide a fallback value for a CSS variable?", options:["var(--color, red)","var(--color): red","--color: red fallback","color: var(--color) fallback"], ans:0},
+  {q:"Which CSS function is used to perform mathematical calculations?", options:["calc()","math()","compute()","calculate()"], ans:0},
+  {q:"What is the output of width: calc(100% - 20px);", options:["100% minus 20 pixels","80%","20px less than full width","Calculated width"], ans:0},
+  {q:"Which CSS function returns the smaller of two values?", options:["min()","max()","small()","least()"], ans:0},
+  {q:"Which CSS function clamps a value between a minimum and maximum?", options:["clamp()","minmax()","bound()","limit()"], ans:0},
+  {q:"What is the purpose of the :is() pseudo-class?", options:["Group selectors with higher specificity","Is selector","Group selectors","Match any selector"], ans:0},
+  {q:"What is the difference between :is() and :where()?", options:[":is() has specificity, :where() has zero","Both have specificity","Both have zero","No difference"], ans:0},
+  {q:"What does the :has() pseudo-class do?", options:["Select element containing another","Select parent","Select child","Select sibling"], ans:0},
+  {q:"How do you select a div that contains a paragraph using CSS?", options:["div:has(p)","div:contains(p)","div p","p:inside(div)"], ans:0},
+  {q:"What is the output of Boolean(0) in JavaScript?", options:["false","true","undefined","null"], ans:0},
+  {q:"What is the output of Boolean('')?", options:["false","true","undefined","null"], ans:0},
+  {q:"What is the output of Boolean('hello')?", options:["true","false","undefined","null"], ans:0},
+  {q:"Which logical operator returns true if both operands are true?", options:["&&","||","!","??"], ans:0},
+  {q:"Which logical operator returns true if at least one operand is true?", options:["||","&&","!","??"], ans:0},
+  {q:"What is the output of true && false?", options:["false","true","undefined","null"], ans:0},
+  {q:"What is the output of true || false?", options:["true","false","undefined","null"], ans:0},
+  {q:"What is the nullish coalescing operator (??)?", options:["Returns right if left is null/undefined","Returns right if left is falsy","Returns left if right is null","Returns left always"], ans:0},
+  {q:"What is the output of null ?? 'default'?", options:["default","null","undefined","'default'"], ans:0},
+  {q:"What is the output of 0 ?? 'default'?", options:["0","default","undefined","null"], ans:0},
+  {q:"What is the ternary operator syntax?", options:["condition ? value1 : value2","if condition then value1 else value2","condition ?: value1 : value2","? condition : value1 value2"], ans:0},
+  {q:"What is the output of 5 > 3 ? 'Yes' : 'No'?", options:["Yes","No","true","false"], ans:0},
+  {q:"What is the purpose of the switch statement?", options:["Multiple condition checking","Loop execution","Function declaration","Variable declaration"], ans:0},
+  {q:"What is the purpose of the default case in a switch?", options:["Runs if no case matches","Default case","First case","Last case"], ans:0},
+  {q:"What is a while loop?", options:["Loops while condition is true","Loops once","Loops forever","Loops while false"], ans:0},
+  {q:"What is a do-while loop?", options:["Runs at least once","Runs only if condition true","Runs never","Runs conditionally"], ans:0},
+  {q:"What is the difference between while and do-while?", options:["Do-while runs at least once","While runs at least once","Both same","Do-while checks first"], ans:0},
+  {q:"How do you write a for loop that iterates 5 times?", options:["for(let i = 0; i < 5; i++)","for i = 0 to 5","for(i = 0; i <= 5)","for(i < 5; i++)"], ans:0},
+  {q:"What is the purpose of the break statement?", options:["Exit loop completely","Skip current iteration","Continue loop","Return value"], ans:0},
+  {q:"What is the purpose of the continue statement?", options:["Skip current iteration","Exit loop","Stop program","Return value"], ans:0},
+  {q:"What is an array-like object in JavaScript?", options:["Object with length property","Array object","Normal object","Function object"], ans:0},
+  {q:"What is the arguments object inside a function?", options:["Array-like object of passed arguments","Function arguments","Parameter list","Return value"], ans:0},
+  {q:"How do you convert an array-like object to an array?", options:["Array.from()","toArray()","convertArray()","arrayify()"], ans:0},
+  {q:"What is the purpose of the spread operator in arrays?", options:["Expand array elements","Collapse array elements","Copy array","Merge arrays"], ans:0},
+  {q:"What is the output of [...[1, 2, 3]]?", options:["[1, 2, 3]","[1, 2, 3, 1, 2, 3]","[[1, 2, 3]]","[1, 2, 3, 3, 2, 1]"], ans:0},
+  {q:"What is the purpose of the rest operator?", options:["Collect remaining elements","Spread elements","Copy elements","Merge elements"], ans:0},
+  {q:"What is the output of const [a, ...b] = [1, 2, 3]; console.log(b);", options:["[2, 3]","[1, 2]","[1]","[3]"], ans:0},
+  {q:"What is destructuring assignment?", options:["Extract values from arrays/objects","Delete values","Copy values","Create values"], ans:0},
+  {q:"What is the output of const {name} = {name: 'John', age: 30}; console.log(name);", options:["John","30","undefined","null"], ans:0},
+  {q:"What is the purpose of default values in destructuring?", options:["Provide fallback values","Set default","Assign default","All of above"], ans:3},
+  {q:"What is the output of const {name = 'Anonymous'} = {}; console.log(name);", options:["Anonymous","undefined","null","{}"], ans:0},
+  {q:"What is a Set in JavaScript?", options:["Collection of unique values","Collection of duplicate values","Array","Object"], ans:0},
+  {q:"How do you add a value to a Set?", options:["add()","push()","append()","insert()"], ans:0},
+  {q:"What is the output of new Set([1, 2, 2, 3]).size?", options:["3","4","2","1"], ans:0},
+  {q:"What is a Map in JavaScript?", options:["Key-value pairs","Array","Set","Object"], ans:0},
+  {q:"How do you set a value in a Map?", options:["set()","put()","add()","insert()"], ans:0},
+  {q:"What is the difference between Map and Object?", options:["Map can have any key type, Object keys are strings","Both same","Map keys are strings","Object can have any key"], ans:0},
+  {q:"What is the purpose of WeakMap?", options:["Map with weak references","Strong map","Normal map","Array map"], ans:0},
+  {q:"What is WeakSet?", options:["Set with weak references","Strong set","Normal set","Array set"], ans:0},
+  {q:"What is the garbage collection in JavaScript?", options:["Automatic memory management","Manual memory management","Memory allocation","Memory deallocation"], ans:0}
+];
+let index=0;
+let answers=new Array(questions.length).fill(undefined);
+let status=new Array(questions.length).fill("notVisited");
+let time=3600,timerInterval;
+
+/* LOGIN */
+function loginUser(){
+let name=user.value.trim();
+let mobile=pass.value.trim();
+
+if(name.length<2){ loginMsg.innerText="Enter valid name"; return;}
+if(!/^\d{10}$/.test(mobile)){ loginMsg.innerText="Enter valid mobile"; return;}
+
+window.studentName=name;
+
+login.style.display="none";
+exam.style.display="block";
+
+startTimer();
+loadQ();
+}
+
+/* TIMER */
+function startTimer(){
+timerInterval=setInterval(()=>{
+time--;
+let m=Math.floor(time/60);
+let s=time%60;
+timer.innerText=`Time: ${m}:${s.toString().padStart(2,'0')}`;
+if(time<=0) submitExam();
+},1000);
+}
+
+/* LOAD */
+function loadQ(){
+if(status[index]==="notVisited") status[index]="notAnswered";
+
+let q=questions[index];
+question.innerText=(index+1)+". "+q.q;
+
+let html="";
+q.options.forEach(opt=>{
+let checked=(answers[index]===opt)?"checked":"";
+html+=`<label class="option">
+<input type="radio" name="q${index}" ${checked}
+onchange="selectOption('${opt}')"> ${opt}
+</label>`;
+});
+options.innerHTML=html;
+
+updateCounter();
+loadPalette();
+}
+
+function selectOption(val){ answers[index]=val; status[index]="answered"; loadPalette(); }
+function prev(){ if(index>0){index--; loadQ();}}
+function saveAndNext(){ if(index<questions.length-1){index++; loadQ();}}
+function clearAnswer(){ answers[index]=undefined; status[index]="notAnswered"; loadQ(); }
+function markReview(){ status[index]="review"; loadPalette(); }
+
+function updateCounter(){
+counter.innerText=`Answered: ${answers.filter(a=>a!==undefined).length}/${questions.length}`;
+}
+
+function loadPalette(){
+let html="";
+for(let i=0;i<questions.length;i++){
+let color="#ccc";
+if(status[i]=="answered") color="green";
+else if(status[i]=="notAnswered") color="red";
+else if(status[i]=="review") color="orange";
+
+html+=`<button class="palette-btn" style="background:${color}" onclick="goTo(${i})">${i+1}</button>`;
+}
+palette.innerHTML=html;
+}
+
+function goTo(i){ index=i; loadQ(); }
+function confirmSubmit(){ if(confirm("Submit exam?")) submitExam(); }
+
+/* RESULT */
+function submitExam(){
+clearInterval(timerInterval);
+
+exam.style.display="none";
+result.style.display="block";
+
+/* HEADER INFO */
+let now=new Date();
+studentInfo.innerText=`Name: ${window.studentName} | Date: ${now.toLocaleDateString()} | Time: ${now.toLocaleTimeString()}`;
+
+let correct=0,wrong=0,unattempted=0;
+
+questions.forEach((q,i)=>{
+if(answers[i]===undefined) unattempted++;
+else if(answers[i]===q.options[q.ans]) correct++;
+else wrong++;
+});
+
+tTotal.innerText=questions.length;
+tCorrect.innerText=correct;
+tWrong.innerText=wrong;
+tUnattempted.innerText=unattempted;
+tScore.innerText=((correct/questions.length)*100).toFixed(1)+"%";
+
+/* ✅ PERFECT CHARTS */
+new Chart(pieChart,{
+type:"pie",
+data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]},
+options:{responsive:true,maintainAspectRatio:false}
+});
+
+new Chart(barChart,{
+type:"bar",
+data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]},
+options:{responsive:true,maintainAspectRatio:false}
+});
+
+generateReview();
+}
+
+/* REVIEW */
+function generateReview(){
+let html="";
+questions.forEach((q,i)=>{
+let bg="unattempted-bg";
+if(answers[i]===q.options[q.ans]) bg="correct-bg";
+else if(answers[i]!==undefined) bg="wrong-bg";
+
+html+=`<div class="review-box ${bg}">
+<b>Q${i+1}: ${q.q}</b><br>`;
+q.options.forEach(opt=>{
+let style="";
+if(opt===q.options[q.ans]) style="color:green;font-weight:bold;";
+if(opt===answers[i] && opt!==q.options[q.ans]) style="color:red;";
+html+=`<div style="${style}">${opt}</div>`;
+});
+html+="</div>";
+});
+review.innerHTML=html;
+}
+
+/* PDF */
+async function downloadPDF(){
+const { jsPDF } = window.jspdf;
+
+const pdf = new jsPDF('p','mm','a4');
+let y = 10;
+
+/* HEADER */
+let now = new Date();
+pdf.setFontSize(12);
+pdf.text(`Name: ${window.studentName}`,10,y);
+y+=6;
+pdf.text(`Date: ${now.toLocaleDateString()}`,10,y);
+y+=6;
+pdf.text(`Time: ${now.toLocaleTimeString()}`,10,y);
+y+=10;
+
+/* SUMMARY */
+pdf.text(`Total: ${questions.length}`,10,y); y+=6;
+pdf.text(`Correct: ${tCorrect.innerText}`,10,y); y+=6;
+pdf.text(`Wrong: ${tWrong.innerText}`,10,y); y+=6;
+pdf.text(`Not Attempted: ${tUnattempted.innerText}`,10,y); y+=6;
+pdf.text(`Score: ${tScore.innerText}`,10,y); y+=10;
+
+/* QUESTIONS */
+questions.forEach((q,i)=>{
+let text = `Q${i+1}: ${q.q}`;
+let splitQ = pdf.splitTextToSize(text, 180);
+
+if(y > 270){ pdf.addPage(); y=10; }
+pdf.text(splitQ,10,y);
+y += splitQ.length * 6;
+
+/* OPTIONS */
+q.options.forEach((opt,idx)=>{
+let label = "";
+
+if(idx === q.ans){
+label = `✔ ${opt}`; // correct
+}else if(opt === answers[i]){
+label = `✘ ${opt}`; // wrong selected
+}else{
+label = `- ${opt}`;
+}
+
+let splitOpt = pdf.splitTextToSize(label, 170);
+
+if(y > 270){ pdf.addPage(); y=10; }
+pdf.text(splitOpt,15,y);
+y += splitOpt.length * 5;
+});
+
+y+=4;
+});
+
+pdf.save("Full_Result.pdf");
+}
+
+</script>
+
+</body>
+</html>

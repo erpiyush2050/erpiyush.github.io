@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>O level - CBT Exam</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body { margin:0; font-family:Arial; background:#f4f6f8; }
+
+.login-container{
+height:100vh; display:flex; justify-content:center; align-items:center;
+background:linear-gradient(135deg,#007bff,#00c6ff);
+}
+.login-box{
+background:white; padding:40px; border-radius:15px; width:300px;
+box-shadow:0 10px 25px rgba(0,0,0,0.2); text-align:center;
+}
+
+.header {
+background:#1a73e8;color:white;padding:15px;
+display:flex;justify-content:space-between;align-items:center;
+}
+
+.container { display:flex; height:85vh; }
+.left { width:20%; background:#fff; padding:10px; overflow:auto; }
+.right { width:80%; padding:20px; }
+
+.option {
+display:block;padding:12px;margin:8px 0;background:#eee;border-radius:8px;cursor:pointer;
+}
+
+.btn{
+padding:10px 18px;border:none;border-radius:8px;color:white;font-weight:bold;cursor:pointer;margin:5px;
+}
+.blue{ background:#007bff; }
+.green{ background:#28a745; }
+.yellow{ background:#ffc107; color:black; }
+.red{ background:#dc3545; }
+
+.palette-btn {width:40px;height:40px;margin:5px;border:none;border-radius:6px;}
+
+.result-card{background:white;padding:25px;border-radius:15px;max-width:1200px;margin:20px auto;}
+.score-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;}
+.score-box{background:#f8f9fc;padding:15px;border-radius:10px;text-align:center;}
+
+/* ✅ PERFECT CHART ALIGNMENT */
+.chart-container{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+margin-top:20px;
+}
+
+.chart-box{
+height:320px;
+background:#fff;
+padding:15px;
+border-radius:12px;
+box-shadow:0 2px 8px rgba(0,0,0,0.1);
+display:flex;
+align-items:center;
+justify-content:center;
+transition:0.3s;
+}
+.chart-box:hover{
+transform:scale(1.02);
+}
+
+.review-box{padding:12px;margin:10px 0;border-radius:8px;}
+.correct-bg{ background:#d4edda; }
+.wrong-bg{ background:#f8d7da; }
+.unattempted-bg{ background:#fff3cd; }
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="login-container">
+<div class="login-box">
+<h2>O Level - CBT Login</h2>
+<input id="user" placeholder="Enter Name"><br><br>
+<input id="pass" placeholder="Enter Mobile"><br><br>
+<button class="btn blue" onclick="loginUser()">Start Exam</button>
+<p id="loginMsg"></p>
+</div>
+</div>
+
+<!-- EXAM -->
+<div id="exam" style="display:none;">
+<div class="header">
+<div>Web Designing Part 1 - CBT Examination Portal</div>
+<div id="timer"></div>
+</div>
+
+<div class="container">
+<div class="left"><div id="palette"></div></div>
+
+<div class="right">
+<h4 id="counter"></h4>
+<h3 id="question"></h3>
+<div id="options"></div>
+
+<div>
+<button class="btn blue" onclick="prev()">Prev</button>
+<button class="btn green" onclick="saveAndNext()">Next</button>
+<button class="btn yellow" onclick="markReview()">Mark Review</button>
+<button class="btn yellow" onclick="clearAnswer()">Clear</button>
+<button class="btn red" onclick="confirmSubmit()">Submit</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- RESULT -->
+<div id="result" style="display:none;">
+<div class="header">
+<div>
+📊 Result Dashboard<br>
+<small id="studentInfo"></small>
+</div>
+<button class="btn green" onclick="downloadPDF()">Download PDF</button>
+</div>
+
+<div id="resultContent" class="result-card">
+
+<div class="score-grid">
+<div class="score-box">Total<br><b id="tTotal"></b></div>
+<div class="score-box">Correct<br><b id="tCorrect"></b></div>
+<div class="score-box">Wrong<br><b id="tWrong"></b></div>
+<div class="score-box">Not Attempted<br><b id="tUnattempted"></b></div>
+<div class="score-box">Score<br><b id="tScore"></b></div>
+</div>
+
+<!-- ✅ CHARTS TOGETHER -->
+<div class="chart-container">
+  <div class="chart-box">
+    <canvas id="pieChart"></canvas>
+  </div>
+  <div class="chart-box">
+    <canvas id="barChart"></canvas>
+  </div>
+</div>
+
+<h3>📝 Question Review</h3>
+<div id="review"></div>
+
+</div>
+</div>
+
+<script>
+
+/* Basic HTML questions */
+const questions = [
+  {q:"Which tag is used to create a hyperlink in HTML?", options:["<a>","<link>","<href>","<nav>"], ans:0},
+  {q:"What is the correct HTML element for inserting a line break?", options:["<lb>","<break>","<br>","<hr>"], ans:2},
+  {q:"Which attribute is used to specify the URL of an image?", options:["href","alt","src","link"], ans:2},
+  {q:"What is the purpose of the colspan attribute in a table?", options:["Merge rows vertically","Merge columns horizontally","Add border to cell","Add padding to cell"], ans:1},
+  {q:"Which tag is used to create a table row?", options:["<td>","<th>","<tr>","<table>"], ans:2},
+  {q:"What does the rowspan attribute do?", options:["Merges cells across multiple rows","Merges cells across multiple columns","Adds space inside cell","Sets row height"], ans:0},
+  {q:"Which tag is used for subscript text?", options:["<sup>","<sub>","<small>","<low>"], ans:1},
+  {q:"Which tag is used for superscript text?", options:["<sub>","<sup>","<top>","<super>"], ans:1},
+  {q:"What does the <strong> tag represent?", options:["Bold text with semantic importance","Italic text","Underlined text","Strikethrough text"], ans:0},
+  {q:"Which tag makes text italic?", options:["<b>","<i>","<em>","Both B and C"], ans:3},
+  {q:"What is the purpose of the <big> tag?", options:["Makes text larger (deprecated)","Makes text smaller","Makes text bold","Makes text italic"], ans:0},
+  {q:"Which tag is used to highlight text?", options:["<highlight>","<mark>","<yellow>","<bg>"], ans:1},
+  {q:"What does the <small> tag do?", options:["Makes text smaller","Makes text larger","Makes text bold","Makes text italic"], ans:0},
+  {q:"Which tag is used to create a radio button?", options:["<input type='checkbox'>","<input type='radio'>","<radio>","<input type='button'>"], ans:1},
+  {q:"How do you create a checkbox in HTML?", options:["<input type='checkbox'>","<checkbox>","<input type='radio'>","<check>"], ans:0},
+  {q:"Which tag creates an ordered list?", options:["<ul>","<ol>","<li>","<list>"], ans:1},
+  {q:"Which tag creates an unordered list?", options:["<ol>","<ul>","<li>","<list>"], ans:1},
+  {q:"What is the correct way to create a dropdown list?", options:["<select><option></option></select>","<dropdown><item></item></dropdown>","<list><option></option></list>","<input type='dropdown'>"], ans:0},
+  {q:"How do you preselect an option in a dropdown?", options:["selected attribute","checked attribute","default attribute","preselect attribute"], ans:0},
+  {q:"What is the purpose of the <fieldset> tag?", options:["Group form elements","Create border around form","Add legend to form","All of the above"], ans:3},
+  {q:"Which tag is used to create a frameset?", options:["<frameset>","<frame>","<iframe>","<framecontainer>"], ans:0},
+  {q:"What is the difference between <frame> and <iframe>?", options:["Frame works with frameset, iframe is inline","Both are same","Iframe works with frameset","Frame is inline"], ans:0},
+  {q:"Which attribute specifies the source URL in a frame?", options:["href","src","link","url"], ans:1},
+  {q:"What is the purpose of the <noframes> tag?", options:["Content for non-frame browsers","No frames on page","Hide frames","Disable frames"], ans:0},
+  {q:"Which attribute is used to remove the border from an iframe?", options:["border='0'","frameborder='0'","frameBorder='0'","All of the above"], ans:3},
+  {q:"What is the correct HTML for creating a hyperlink that opens in a new tab?", options:["<a href='url' target='_blank'>","<a href='url' target='_self'>","<a href='url' target='_parent'>","<a href='url' new='true'>"], ans:0},
+  {q:"What is the purpose of the alt attribute in an image tag?", options:["Alternative text for image","Image source","Image title","Image description"], ans:0},
+  {q:"How do you create an email link in HTML?", options:["<a href='mailto:email@example.com'>","<mailto>email@example.com</mailto>","<a email='email@example.com'>","<email>email@example.com</email>"], ans:0},
+  {q:"What does the <hr> tag represent?", options:["Horizontal rule","Header rule","Hyperlink rule","Height rule"], ans:0},
+  {q:"What is the purpose of the <caption> tag in a table?", options:["Add title to table","Add footer to table","Add header to table","Add border to table"], ans:0},
+  {q:"Which tag is used to define the header cell in a table?", options:["<td>","<th>","<thead>","<tr>"], ans:1},
+  {q:"What is the purpose of cellpadding attribute?", options:["Space inside cells","Space between cells","Border thickness","Cell width"], ans:0},
+  {q:"What is the purpose of cellspacing attribute?", options:["Space between cells","Space inside cells","Border thickness","Cell height"], ans:0},
+  {q:"Which tag is used for deleted text?", options:["<del>","<ins>","<strike>","<s>"], ans:0},
+  {q:"Which tag is used for inserted text?", options:["<ins>","<add>","<new>","<insert>"], ans:0},
+  {q:"What is the purpose of the <pre> tag?", options:["Preserves spaces and line breaks","Preformatted headings","Predefined text","Preview text"], ans:0},
+  {q:"Which tag is used to create a definition list?", options:["<dl>","<df>","<dd>","<dt>"], ans:0},
+  {q:"What is the purpose of the <abbr> tag?", options:["Define abbreviation","Define address","Define bold text","Define blockquote"], ans:0},
+  {q:"Which tag is used to define an address?", options:["<address>","<add>","<addr>","<ad>"], ans:0},
+  {q:"What does the <cite> tag represent?", options:["Citation of a work","Code snippet","Computer output","Inline quotation"], ans:0},
+  {q:"Which CSS property is used to change the background color of an element?", options:["background-color","bg-color","color","background"], ans:0},
+  {q:"What is the correct CSS syntax to select an element by its ID?", options:[".myId","#myId","myId","*myId"], ans:1},
+  {q:"Which CSS property is used to change the text color?", options:["color","text-color","font-color","foreground-color"], ans:0},
+  {q:"What is the default value of the position property?", options:["relative","absolute","fixed","static"], ans:3},
+  {q:"Which CSS property is used to add space inside an element's border?", options:["margin","padding","spacing","inner-space"], ans:1},
+  {q:"Which CSS property is used to add space outside an element's border?", options:["padding","margin","border-space","outer-space"], ans:1},
+  {q:"How do you make text bold in CSS?", options:["font-weight: bold;","text-weight: bold;","font: bold;","weight: bold;"], ans:0},
+  {q:"How do you center text horizontally inside a block element?", options:["text-align: center;","align: center;","center: true;","text-center: center;"], ans:0},
+  {q:"Which CSS property is used to create rounded corners?", options:["corner-radius","border-radius","round-corner","radius"], ans:1},
+  {q:"What does the display: none; property do?", options:["Hides element and removes its space","Hides element but keeps space","Makes element invisible","Makes element transparent"], ans:0},
+  {q:"What is the difference between display: none and visibility: hidden?", options:["None removes space, hidden keeps space","Both remove space","Both keep space","None keeps space, hidden removes"], ans:0},
+  {q:"Which CSS property is used to set the width of an element?", options:["width","size","w","element-width"], ans:0},
+  {q:"Which unit is relative to the viewport width?", options:["vw","vh","vmin","vmax"], ans:0},
+  {q:"How do you select all elements with class 'container'?", options:[".container","#container","container","*container"], ans:0},
+  {q:"How do you select all paragraph elements inside a div?", options:["div p","div,p","div > p","div + p"], ans:0},
+  {q:"Which CSS property creates a shadow around an element?", options:["box-shadow","shadow","element-shadow","drop-shadow"], ans:0},
+  {q:"What is the purpose of the z-index property?", options:["Stack order of elements","Zoom level","Z-axis rotation","Font size"], ans:0},
+  {q:"How do you make a flex container?", options:["display: flex;","display: flexbox;","display: block;","display: inline;"], ans:0},
+  {q:"Which property is used to align items vertically in a flex container?", options:["align-items","justify-content","align-content","flex-align"], ans:0},
+  {q:"Which property is used to create a CSS grid container?", options:["display: grid;","display: flex;","display: grid-container;","display: inline-grid;"], ans:0},
+  {q:"How do you create three equal columns in CSS Grid?", options:["grid-template-columns: 1fr 1fr 1fr;","grid-columns: 1fr 1fr 1fr;","grid-template: 1fr 1fr 1fr;","columns: 1fr 1fr 1fr;"], ans:0},
+  {q:"What does the fr unit represent in CSS Grid?", options:["Fraction of available space","Fixed ratio","Flexible ratio","Full ratio"], ans:0},
+  {q:"Which CSS property is used to create a transition effect?", options:["transition","animation","transform","keyframes"], ans:0},
+  {q:"How do you rotate an element by 45 degrees using CSS?", options:["transform: rotate(45deg);","rotate: 45deg;","transform-rotate: 45deg;","angle: 45deg;"], ans:0},
+  {q:"What is the purpose of the @media rule?", options:["Responsive design","Import styles","Define keyframes","Create variables"], ans:0},
+  {q:"Which CSS property is used to change the cursor to a pointer?", options:["cursor: pointer;","cursor: hand;","pointer: cursor;","mouse: pointer;"], ans:0},
+  {q:"How do you remove the underline from a hyperlink?", options:["text-decoration: none;","text-underline: none;","underline: none;","decoration: none;"], ans:0},
+  {q:"Which CSS property is used to set the opacity of an element?", options:["opacity","transparency","alpha","visibility"], ans:0},
+  {q:"What does the overflow: hidden; property do?", options:["Hides overflowing content","Hides entire element","Adds scrollbar","Hides border"], ans:0},
+  {q:"How do you center a block element horizontally using margin?", options:["margin: auto;","margin: 0 auto;","margin-left: auto; margin-right: auto;","All of the above"], ans:3},
+  {q:"Which CSS property is used to change the font family?", options:["font-family","font-type","family-font","text-font"], ans:0},
+  {q:"What is the default value of the float property?", options:["none","left","right","inherit"], ans:0},
+  {q:"How do you clear floats in CSS?", options:["clear: both;","float: none;","overflow: auto;","clearfix"], ans:0},
+  {q:"Which CSS property is used to add a shadow to text?", options:["text-shadow","font-shadow","shadow-text","text-glow"], ans:0},
+  {q:"What is the purpose of the outline property?", options:["Draw line outside border","Draw line inside border","Draw line on border","Remove border"], ans:0},
+  {q:"Which CSS property is used to change the list item marker?", options:["list-style-type","list-type","marker-type","bullet-type"], ans:0},
+  {q:"How do you create a CSS variable?", options:["--variable-name","$variable-name","@variable-name","#variable-name"], ans:0},
+  {q:"What is the purpose of the calc() function?", options:["Perform calculations in CSS","Calculate colors","Calculate animations","Calculate selectors"], ans:0},
+  {q:"Which pseudo-class selects the first child of an element?", options:[":first-child",":first",":nth-child(1)",":first-of-type"], ans:0},
+  {q:"How do you select every even row in a table?", options:[":nth-child(even)",":even",":child(even)",":nth(even)"], ans:0},
+  {q:"What is the correct way to declare a variable in JavaScript?", options:["var x;","v x;","variable x;","declare x;"], ans:0},
+  {q:"What is the output of 5 + '5' in JavaScript?", options:["55","10","'55'","Error"], ans:0},
+  {q:"What is the output of 5 - '3' in JavaScript?", options:["2","'53'","'2'","Error"], ans:0},
+  {q:"Which operator is used for strict equality comparison?", options:["===","==","=","!=="], ans:0},
+  {q:"What is the difference between == and ===?", options:["== compares value, === compares value and type","== compares type, === compares value","Both are same","=== compares only type"], ans:0},
+  {q:"What is the output of typeof null in JavaScript?", options:["object","null","undefined","string"], ans:0},
+  {q:"What is the output of typeof undefined?", options:["undefined","null","object","string"], ans:0},
+  {q:"How do you create an array in JavaScript?", options:["let arr = [1, 2, 3];","let arr = (1, 2, 3);","let arr = {1, 2, 3};","let arr = <1, 2, 3>;"], ans:0},
+  {q:"Which method adds an element to the end of an array?", options:["push()","pop()","shift()","unshift()"], ans:0},
+  {q:"Which method removes the last element from an array?", options:["pop()","push()","shift()","unshift()"], ans:0},
+  {q:"Which method creates a new array by applying a function to each element?", options:["map()","filter()","reduce()","forEach()"], ans:0},
+  {q:"Which method creates a new array with elements that pass a test?", options:["filter()","map()","reduce()","find()"], ans:0},
+  {q:"What is the output of [1, 2, 3].length?", options:["3","2","4","1"], ans:0},
+  {q:"How do you create a function in JavaScript?", options:["function myFunc() {}","func myFunc() {}","def myFunc() {}","create myFunc() {}"], ans:0},
+  {q:"What is an arrow function?", options:["() => {}","function() => {}","=> function() {}","function => {}"], ans:0},
+  {q:"What is the output of const add = (a, b) => a + b; add(2, 3);", options:["5","23","'23'","Error"], ans:0},
+  {q:"What is the purpose of the return statement?", options:["Return value from function","Exit function","Stop function","All of above"], ans:3},
+  {q:"What is a callback function?", options:["Function passed as argument","Function that calls itself","Function that returns value","Function that is asynchronous"], ans:0},
+  {q:"What is the output of 'Hello'.toUpperCase();", options:["HELLO","hello","Hello","hELLO"], ans:0},
+  {q:"Which method extracts a part of a string?", options:["slice()","substring()","substr()","All of above"], ans:3},
+  {q:"What is the output of 'Hello World'.indexOf('World');", options:["6","0","5","-1"], ans:0},
+  {q:"How do you create an object in JavaScript?", options:["let obj = {};","let obj = [];","let obj = ();","let obj = <>;"], ans:0},
+  {q:"How do you access the property 'name' of an object?", options:["obj.name","obj->name","obj:name","obj[name]"], ans:0},
+  {q:"What is the purpose of the console.log() function?", options:["Output to console","Output to alert","Output to file","Output to screen"], ans:0},
+  {q:"What is the output of console.log(typeof 42);", options:["number","string","object","boolean"], ans:0},
+  {q:"What is the output of let x; console.log(x);", options:["undefined","null","0","Error"], ans:0},
+  {q:"What is NaN in JavaScript?", options:["Not a Number","Number","Null","Not a Name"], ans:0},
+  {q:"What is the output of isNaN('abc');", options:["true","false","undefined","null"], ans:0},
+  {q:"What is the purpose of the if statement?", options:["Conditional execution","Loop execution","Function declaration","Variable declaration"], ans:0},
+  {q:"What is the syntax for a for loop?", options:["for(i = 0; i < 5; i++)","for i = 0 to 5","for(i = 0; i <= 5)","for(i < 5; i++)"], ans:0},
+  {q:"What is the purpose of the break statement?", options:["Exit loop","Continue loop","Skip iteration","Return value"], ans:0},
+  {q:"What is the purpose of the continue statement?", options:["Skip current iteration","Exit loop","Stop program","Return value"], ans:0},
+  {q:"How do you handle errors in JavaScript?", options:["try...catch","if...else","for...in","while...do"], ans:0},
+  {q:"What is the purpose of the throw statement?", options:["Throw custom error","Throw value","Throw function","Throw object"], ans:0},
+  {q:"What is a Promise in JavaScript?", options:["Async operation result","Synchronous operation","Callback function","Event handler"], ans:0},
+  {q:"What are the states of a Promise?", options:["Pending, Fulfilled, Rejected","Start, Middle, End","Open, Close, Error","Wait, Done, Fail"], ans:0},
+  {q:"How do you handle a resolved Promise?", options:[".then()",".catch()",".finally()",".resolve()"], ans:0},
+  {q:"What is the purpose of async/await?", options:["Handle promises synchronously","Create asynchronous function","Handle callbacks","Create events"], ans:0},
+  {q:"Which keyword is used before a function to make it asynchronous?", options:["async","await","promise","then"], ans:0},
+  {q:"What is the output of typeof function(){};", options:["function","object","string","number"], ans:0}
+];
+
+let index=0;
+let answers=new Array(questions.length).fill(undefined);
+let status=new Array(questions.length).fill("notVisited");
+let time=3600,timerInterval;
+
+/* LOGIN */
+function loginUser(){
+let name=user.value.trim();
+let mobile=pass.value.trim();
+
+if(name.length<2){ loginMsg.innerText="Enter valid name"; return;}
+if(!/^\d{10}$/.test(mobile)){ loginMsg.innerText="Enter valid mobile"; return;}
+
+window.studentName=name;
+
+login.style.display="none";
+exam.style.display="block";
+
+startTimer();
+loadQ();
+}
+
+/* TIMER */
+function startTimer(){
+timerInterval=setInterval(()=>{
+time--;
+let m=Math.floor(time/60);
+let s=time%60;
+timer.innerText=`Time: ${m}:${s.toString().padStart(2,'0')}`;
+if(time<=0) submitExam();
+},1000);
+}
+
+/* LOAD */
+function loadQ(){
+if(status[index]==="notVisited") status[index]="notAnswered";
+
+let q=questions[index];
+question.innerText=(index+1)+". "+q.q;
+
+let html="";
+q.options.forEach(opt=>{
+let checked=(answers[index]===opt)?"checked":"";
+html+=`<label class="option">
+<input type="radio" name="q${index}" ${checked}
+onchange="selectOption('${opt}')"> ${opt}
+</label>`;
+});
+options.innerHTML=html;
+
+updateCounter();
+loadPalette();
+}
+
+function selectOption(val){ answers[index]=val; status[index]="answered"; loadPalette(); }
+function prev(){ if(index>0){index--; loadQ();}}
+function saveAndNext(){ if(index<questions.length-1){index++; loadQ();}}
+function clearAnswer(){ answers[index]=undefined; status[index]="notAnswered"; loadQ(); }
+function markReview(){ status[index]="review"; loadPalette(); }
+
+function updateCounter(){
+counter.innerText=`Answered: ${answers.filter(a=>a!==undefined).length}/${questions.length}`;
+}
+
+function loadPalette(){
+let html="";
+for(let i=0;i<questions.length;i++){
+let color="#ccc";
+if(status[i]=="answered") color="green";
+else if(status[i]=="notAnswered") color="red";
+else if(status[i]=="review") color="orange";
+
+html+=`<button class="palette-btn" style="background:${color}" onclick="goTo(${i})">${i+1}</button>`;
+}
+palette.innerHTML=html;
+}
+
+function goTo(i){ index=i; loadQ(); }
+function confirmSubmit(){ if(confirm("Submit exam?")) submitExam(); }
+
+/* RESULT */
+function submitExam(){
+clearInterval(timerInterval);
+
+exam.style.display="none";
+result.style.display="block";
+
+/* HEADER INFO */
+let now=new Date();
+studentInfo.innerText=`Name: ${window.studentName} | Date: ${now.toLocaleDateString()} | Time: ${now.toLocaleTimeString()}`;
+
+let correct=0,wrong=0,unattempted=0;
+
+questions.forEach((q,i)=>{
+if(answers[i]===undefined) unattempted++;
+else if(answers[i]===q.options[q.ans]) correct++;
+else wrong++;
+});
+
+tTotal.innerText=questions.length;
+tCorrect.innerText=correct;
+tWrong.innerText=wrong;
+tUnattempted.innerText=unattempted;
+tScore.innerText=((correct/questions.length)*100).toFixed(1)+"%";
+
+/* ✅ PERFECT CHARTS */
+new Chart(pieChart,{
+type:"pie",
+data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]},
+options:{responsive:true,maintainAspectRatio:false}
+});
+
+new Chart(barChart,{
+type:"bar",
+data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]},
+options:{responsive:true,maintainAspectRatio:false}
+});
+
+generateReview();
+}
+
+/* REVIEW */
+function generateReview(){
+let html="";
+questions.forEach((q,i)=>{
+let bg="unattempted-bg";
+if(answers[i]===q.options[q.ans]) bg="correct-bg";
+else if(answers[i]!==undefined) bg="wrong-bg";
+
+html+=`<div class="review-box ${bg}">
+<b>Q${i+1}: ${q.q}</b><br>`;
+q.options.forEach(opt=>{
+let style="";
+if(opt===q.options[q.ans]) style="color:green;font-weight:bold;";
+if(opt===answers[i] && opt!==q.options[q.ans]) style="color:red;";
+html+=`<div style="${style}">${opt}</div>`;
+});
+html+="</div>";
+});
+review.innerHTML=html;
+}
+
+/* PDF */
+async function downloadPDF(){
+const { jsPDF } = window.jspdf;
+
+const pdf = new jsPDF('p','mm','a4');
+let y = 10;
+
+/* HEADER */
+let now = new Date();
+pdf.setFontSize(12);
+pdf.text(`Name: ${window.studentName}`,10,y);
+y+=6;
+pdf.text(`Date: ${now.toLocaleDateString()}`,10,y);
+y+=6;
+pdf.text(`Time: ${now.toLocaleTimeString()}`,10,y);
+y+=10;
+
+/* SUMMARY */
+pdf.text(`Total: ${questions.length}`,10,y); y+=6;
+pdf.text(`Correct: ${tCorrect.innerText}`,10,y); y+=6;
+pdf.text(`Wrong: ${tWrong.innerText}`,10,y); y+=6;
+pdf.text(`Not Attempted: ${tUnattempted.innerText}`,10,y); y+=6;
+pdf.text(`Score: ${tScore.innerText}`,10,y); y+=10;
+
+/* QUESTIONS */
+questions.forEach((q,i)=>{
+let text = `Q${i+1}: ${q.q}`;
+let splitQ = pdf.splitTextToSize(text, 180);
+
+if(y > 270){ pdf.addPage(); y=10; }
+pdf.text(splitQ,10,y);
+y += splitQ.length * 6;
+
+/* OPTIONS */
+q.options.forEach((opt,idx)=>{
+let label = "";
+
+if(idx === q.ans){
+label = `✔ ${opt}`; // correct
+}else if(opt === answers[i]){
+label = `✘ ${opt}`; // wrong selected
+}else{
+label = `- ${opt}`;
+}
+
+let splitOpt = pdf.splitTextToSize(label, 170);
+
+if(y > 270){ pdf.addPage(); y=10; }
+pdf.text(splitOpt,15,y);
+y += splitOpt.length * 5;
+});
+
+y+=4;
+});
+
+pdf.save("Full_Result.pdf");
+}
+
+</script>
+
+</body>
+</html>
