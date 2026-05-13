@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>O level - CBT Exam</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body { margin:0; font-family:Arial; background:#f4f6f8; }
+
+.login-container{
+height:100vh; display:flex; justify-content:center; align-items:center;
+background:linear-gradient(135deg,#007bff,#00c6ff);
+}
+.login-box{
+background:white; padding:40px; border-radius:15px; width:300px;
+box-shadow:0 10px 25px rgba(0,0,0,0.2); text-align:center;
+}
+
+.header {
+background:#1a73e8;color:white;padding:15px;
+display:flex;justify-content:space-between;align-items:center;
+}
+
+.container { display:flex; height:85vh; }
+.left { width:20%; background:#fff; padding:10px; overflow:auto; }
+.right { width:80%; padding:20px; }
+
+.option {
+display:block;padding:12px;margin:8px 0;background:#eee;border-radius:8px;cursor:pointer;
+}
+
+.btn{
+padding:10px 18px;border:none;border-radius:8px;color:white;font-weight:bold;cursor:pointer;margin:5px;
+}
+.blue{ background:#007bff; }
+.green{ background:#28a745; }
+.yellow{ background:#ffc107; color:black; }
+.red{ background:#dc3545; }
+
+.palette-btn {width:40px;height:40px;margin:5px;border:none;border-radius:6px;}
+
+.result-card{background:white;padding:25px;border-radius:15px;max-width:1200px;margin:20px auto;}
+.score-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;}
+.score-box{background:#f8f9fc;padding:15px;border-radius:10px;text-align:center;}
+
+/* ✅ PERFECT CHART ALIGNMENT */
+.chart-container{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+margin-top:20px;
+}
+
+.chart-box{
+height:320px;
+background:#fff;
+padding:15px;
+border-radius:12px;
+box-shadow:0 2px 8px rgba(0,0,0,0.1);
+display:flex;
+align-items:center;
+justify-content:center;
+transition:0.3s;
+}
+.chart-box:hover{
+transform:scale(1.02);
+}
+
+.review-box{padding:12px;margin:10px 0;border-radius:8px;}
+.correct-bg{ background:#d4edda; }
+.wrong-bg{ background:#f8d7da; }
+.unattempted-bg{ background:#fff3cd; }
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="login-container">
+<div class="login-box">
+<h2>O Level - CBT Login</h2>
+<input id="user" placeholder="Enter Name"><br><br>
+<input id="pass" placeholder="Enter Mobile"><br><br>
+<button class="btn blue" onclick="loginUser()">Start Exam</button>
+<p id="loginMsg"></p>
+</div>
+</div>
+
+<!-- EXAM -->
+<div id="exam" style="display:none;">
+<div class="header">
+<div>JavaScript Part 5- CBT Examination Portal</div>
+<div id="timer"></div>
+</div>
+
+<div class="container">
+<div class="left"><div id="palette"></div></div>
+
+<div class="right">
+<h4 id="counter"></h4>
+<h3 id="question"></h3>
+<div id="options"></div>
+
+<div>
+<button class="btn blue" onclick="prev()">Prev</button>
+<button class="btn green" onclick="saveAndNext()">Next</button>
+<button class="btn yellow" onclick="markReview()">Mark Review</button>
+<button class="btn yellow" onclick="clearAnswer()">Clear</button>
+<button class="btn red" onclick="confirmSubmit()">Submit</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- RESULT -->
+<div id="result" style="display:none;">
+<div class="header">
+<div>
+📊 Result Dashboard<br>
+<small id="studentInfo"></small>
+</div>
+<button class="btn green" onclick="downloadPDF()">Download PDF</button>
+</div>
+
+<div id="resultContent" class="result-card">
+
+<div class="score-grid">
+<div class="score-box">Total<br><b id="tTotal"></b></div>
+<div class="score-box">Correct<br><b id="tCorrect"></b></div>
+<div class="score-box">Wrong<br><b id="tWrong"></b></div>
+<div class="score-box">Not Attempted<br><b id="tUnattempted"></b></div>
+<div class="score-box">Score<br><b id="tScore"></b></div>
+</div>
+
+<!-- ✅ CHARTS TOGETHER -->
+<div class="chart-container">
+  <div class="chart-box">
+    <canvas id="pieChart"></canvas>
+  </div>
+  <div class="chart-box">
+    <canvas id="barChart"></canvas>
+  </div>
+</div>
+
+<h3>📝 Question Review</h3>
+<div id="review"></div>
+
+</div>
+</div>
+
+<script>
+
+/* JavaScript questions */
+const questions = [
+  {q:"What is the Geolocation API?", options:["Get user location","Get device info","Get browser info","Get network info"], ans:0},
+  {q:"How do you get current position?", options:["navigator.geolocation.getCurrentPosition()","geolocation.getCurrentPosition()","location.getCurrentPosition()","position.getCurrentPosition()"], ans:0},
+  {q:"What is the Web Storage API?", options:["localStorage and sessionStorage","Cookies","Cache","IndexedDB"], ans:0},
+  {q:"What is the IndexedDB API?", options:["Client-side database","Server-side database","SQL database","NoSQL database"], ans:0},
+  {q:"What is the Cache API?", options:["Cache network requests","Cache data","Cache files","Cache images"], ans:0},
+  {q:"What is a Service Worker?", options:["Proxy between browser and network","Worker thread","Server script","Client script"], ans:0},
+  {q:"What can Service Workers do?", options:["Offline support, push notifications, background sync","Database access","DOM manipulation","Local storage"], ans:0},
+  {q:"What is the life cycle of a Service Worker?", options:["Register, Install, Activate, Fetch","Install, Register, Activate","Activate, Install, Fetch","Register, Activate, Install"], ans:0},
+  {q:"What is the Push API?", options:["Push notifications","Push data","Push messages","Push updates"], ans:0},
+  {q:"What is the Notification API?", options:["Show desktop notifications","Show alerts","Show confirms","Show prompts"], ans:0},
+  {q:"How do you request notification permission?", options:["Notification.requestPermission()","Notification.ask()","Notification.prompt()","Notification.get()"], ans:0},
+  {q:"What is the WebSocket API?", options:["Two-way communication","One-way communication","HTTP requests","File upload"], ans:0},
+  {q:"What is the Server-Sent Events API?", options:["One-way server to client","Two-way communication","Client to server","HTTP requests"], ans:0},
+  {q:"What is the WebRTC API?", options:["Real-time communication","Real-time graphics","Real-time audio","Real-time video"], ans:0},
+  {q:"What is the Canvas API?", options:["Draw graphics","Display video","Display audio","Display text"], ans:0},
+  {q:"How do you get canvas context?", options:["getContext('2d')","getCanvas('2d')","context('2d')","drawContext('2d')"], ans:0},
+  {q:"What is the WebGL API?", options:["3D graphics","2D graphics","Audio processing","Video processing"], ans:0},
+  {q:"What is the Fullscreen API?", options:["Fullscreen mode","Window mode","Popup mode","Dialog mode"], ans:0},
+  {q:"How do you request fullscreen?", options:["element.requestFullscreen()","fullscreen()","enterFullscreen()","goFullscreen()"], ans:0},
+  {q:"What is the Pointer Lock API?", options:["Lock mouse pointer","Lock keyboard","Lock touch","Lock gestures"], ans:0},
+  {q:"What is the Battery Status API?", options:["Get battery info","Get device info","Get network info","Get location info"], ans:0},
+  {q:"What is the Network Information API?", options:["Get network info","Get battery info","Get device info","Get location info"], ans:0},
+  {q:"What is the Vibration API?", options:["Vibrate device","Play sound","Play audio","Play video"], ans:0},
+  {q:"What is the Screen Orientation API?", options:["Get screen orientation","Get screen size","Get screen color","Get screen resolution"], ans:0},
+  {q:"What is the Performance API?", options:["Measure performance","Measure time","Measure memory","All of above"], ans:3},
+  {q:"What is the Navigation Timing API?", options:["Page load timing","Navigation timing","Resource timing","User timing"], ans:0},
+  {q:"What is the Resource Timing API?", options:["Resource load timing","Page load timing","Navigation timing","User timing"], ans:0},
+  {q:"What is the User Timing API?", options:["Custom timing marks","Page load timing","Navigation timing","Resource timing"], ans:0},
+  {q:"What is the Intersection Observer API?", options:["Observe element visibility","Observe element size","Observe element position","Observe element color"], ans:0},
+  {q:"What is the Resize Observer API?", options:["Observe element resize","Observe element move","Observe element change","Observe element delete"], ans:0},
+  {q:"What is the Mutation Observer API?", options:["Observe DOM changes","Observe CSS changes","Observe JS changes","Observe HTML changes"], ans:0},
+  {q:"What is the Clipboard API?", options:["Read/write clipboard","Read/write files","Read/write storage","Read/write cache"], ans:0},
+  {q:"How do you copy text to clipboard?", options:["navigator.clipboard.writeText()","clipboard.copy()","document.copy()","window.copy()"], ans:0},
+  {q:"What is the Payment Request API?", options:["Handle payments","Handle requests","Handle responses","Handle errors"], ans:0},
+  {q:"What is the Credential Management API?", options:["Manage user credentials","Manage cookies","Manage sessions","Manage tokens"], ans:0},
+  {q:"What is the Web Share API?", options:["Share content to native apps","Share data","Share files","Share links"], ans:0},
+  {q:"What is the Web Authentication API?", options:["Biometric authentication","Password authentication","Token authentication","Session authentication"], ans:0},
+  {q:"What is the Drag and Drop API?", options:["Drag and drop elements","Drag and drop files","Drag and drop images","All of above"], ans:3},
+  {q:"How do you make an element draggable?", options:["draggable='true'","drag='true'","draggable='yes'","allow-drag='true'"], ans:0},
+  {q:"What is the History API?", options:["Manipulate browser history","Manipulate localStorage","Manipulate sessionStorage","Manipulate cookies"], ans:0},
+  {q:"What does history.pushState() do?", options:["Add history entry","Replace history entry","Remove history entry","Clear history"], ans:0},
+  {q:"What does history.replaceState() do?", options:["Replace history entry","Add history entry","Remove history entry","Clear history"], ans:0},
+  {q:"What is the purpose of the console API?", options:["Debugging","Styling","Scripting","Layout"], ans:0},
+  {q:"What are common XSS attacks?", options:["Cross-site scripting","Cross-site request forgery","Cross-origin resource sharing","Cross-origin request"], ans:0},
+  {q:"How do you prevent XSS?", options:["Escape user input","Sanitize HTML","Use CSP","All of above"], ans:3},
+  {q:"What is CSRF?", options:["Cross-site request forgery","Cross-site scripting","Cross-origin resource sharing","Cross-origin request"], ans:0},
+  {q:"How do you prevent CSRF?", options:["CSRF tokens","SameSite cookies","CORS","All of above"], ans:3},
+  {q:"What is CORS?", options:["Cross-Origin Resource Sharing","Cross-site scripting","Cross-site request forgery","Cross-origin request"], ans:0},
+  {q:"What is CSP?", options:["Content Security Policy","Cross-Site Policy","Content Style Policy","Common Security Policy"], ans:0},
+  {q:"What is SRI?", options:["Subresource Integrity","Secure Resource Integrity","Script Resource Integrity","Style Resource Integrity"], ans:0},
+  {q:"What is the purpose of the same-origin policy?", options:["Prevent cross-origin attacks","Allow cross-origin requests","Allow all requests","Prevent all requests"], ans:0},
+  {q:"What is a polyfill?", options:["Code that provides modern features to old browsers","API","Framework","Library"], ans:0},
+  {q:"What is transpilation?", options:["Convert modern JS to older JS","Convert JS to CSS","Convert HTML to JS","Convert CSS to JS"], ans:0},
+  {q:"What is Babel?", options:["JavaScript transpiler","JavaScript compiler","JavaScript minifier","JavaScript formatter"], ans:0},
+  {q:"What is Webpack?", options:["Module bundler","JavaScript transpiler","JavaScript compiler","JavaScript minifier"], ans:0},
+  {q:"What is npm?", options:["Node Package Manager","Node Package Module","Node Package","Node Package System"], ans:0},
+  {q:"What is the purpose of package.json?", options:["Manage project dependencies","Manage project files","Manage project structure","Manage project deploy"], ans:0},
+  {q:"What is a linter in JavaScript?", options:["Check code quality","Compile code","Bundle code","Transpile code"], ans:0},
+  {q:"What is ESLint?", options:["JavaScript linter","JavaScript compiler","JavaScript bundler","JavaScript transpiler"], ans:0},
+  {q:"What is Prettier?", options:["Code formatter","Code linter","Code compiler","Code bundler"], ans:0},
+  {q:"What is unit testing?", options:["Test individual units/Components","Test entire app","Test integration","Test performance"], ans:0},
+  {q:"What is Jest?", options:["JavaScript testing framework","JavaScript linter","JavaScript compiler","JavaScript bundler"], ans:0},
+  {q:"What is Mocha?", options:["JavaScript test framework","JavaScript linter","JavaScript compiler","JavaScript bundler"], ans:0},
+  {q:"What is Chai?", options:["Assertion library","Test framework","Test runner","Mock library"], ans:0},
+  {q:"What is JSDoc?", options:["Documentation generator","Documentation tool","Comment parser","Code analyzer"], ans:0},
+  {q:"What is TypeScript?", options:["Typed superset of JavaScript","New JavaScript","JavaScript framework","JavaScript library"], ans:0},
+  {q:"What is the benefit of TypeScript?", options:["Static typing","Dynamic typing","No typing","Weak typing"], ans:0},
+  {q:"What is Deno?", options:["JavaScript runtime","Node.js alternative","TypeScript runtime","All of above"], ans:3}
+];
+
+let index=0;
+let answers=new Array(questions.length).fill(undefined);
+let status=new Array(questions.length).fill("notVisited");
+let time=3600,timerInterval;
+
+/* LOGIN */
+function loginUser(){
+let name=user.value.trim();
+let mobile=pass.value.trim();
+
+if(name.length<2){ loginMsg.innerText="Enter valid name"; return;}
+if(!/^\d{10}$/.test(mobile)){ loginMsg.innerText="Enter valid mobile"; return;}
+
+window.studentName=name;
+
+login.style.display="none";
+exam.style.display="block";
+
+startTimer();
+loadQ();
+}
+
+/* TIMER */
+function startTimer(){
+timerInterval=setInterval(()=>{
+time--;
+let m=Math.floor(time/60);
+let s=time%60;
+timer.innerText=`Time: ${m}:${s.toString().padStart(2,'0')}`;
+if(time<=0) submitExam();
+},1000);
+}
+
+/* LOAD */
+function loadQ(){
+if(status[index]==="notVisited") status[index]="notAnswered";
+
+let q=questions[index];
+question.innerText=(index+1)+". "+q.q;
+
+let html="";
+q.options.forEach(opt=>{
+let checked=(answers[index]===opt)?"checked":"";
+html+=`<label class="option">
+<input type="radio" name="q${index}" ${checked}
+onchange="selectOption('${opt}')"> ${opt}
+</label>`;
+});
+options.innerHTML=html;
+
+updateCounter();
+loadPalette();
+}
+
+function selectOption(val){ answers[index]=val; status[index]="answered"; loadPalette(); }
+function prev(){ if(index>0){index--; loadQ();}}
+function saveAndNext(){ if(index<questions.length-1){index++; loadQ();}}
+function clearAnswer(){ answers[index]=undefined; status[index]="notAnswered"; loadQ(); }
+function markReview(){ status[index]="review"; loadPalette(); }
+
+function updateCounter(){
+counter.innerText=`Answered: ${answers.filter(a=>a!==undefined).length}/${questions.length}`;
+}
+
+function loadPalette(){
+let html="";
+for(let i=0;i<questions.length;i++){
+let color="#ccc";
+if(status[i]=="answered") color="green";
+else if(status[i]=="notAnswered") color="red";
+else if(status[i]=="review") color="orange";
+
+html+=`<button class="palette-btn" style="background:${color}" onclick="goTo(${i})">${i+1}</button>`;
+}
+palette.innerHTML=html;
+}
+
+function goTo(i){ index=i; loadQ(); }
+function confirmSubmit(){ if(confirm("Submit exam?")) submitExam(); }
+
+/* RESULT */
+function submitExam(){
+clearInterval(timerInterval);
+
+exam.style.display="none";
+result.style.display="block";
+
+/* HEADER INFO */
+let now=new Date();
+studentInfo.innerText=`Name: ${window.studentName} | Date: ${now.toLocaleDateString()} | Time: ${now.toLocaleTimeString()}`;
+
+let correct=0,wrong=0,unattempted=0;
+
+questions.forEach((q,i)=>{
+if(answers[i]===undefined) unattempted++;
+else if(answers[i]===q.options[q.ans]) correct++;
+else wrong++;
+});
+
+tTotal.innerText=questions.length;
+tCorrect.innerText=correct;
+tWrong.innerText=wrong;
+tUnattempted.innerText=unattempted;
+tScore.innerText=((correct/questions.length)*100).toFixed(1)+"%";
+
+/* ✅ PERFECT CHARTS */
+new Chart(pieChart,{
+type:"pie",
+data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]},
+options:{responsive:true,maintainAspectRatio:false}
+});
+
+new Chart(barChart,{
+type:"bar",
+data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]},
+options:{responsive:true,maintainAspectRatio:false}
+});
+
+generateReview();
+}
+
+/* REVIEW */
+function generateReview(){
+let html="";
+questions.forEach((q,i)=>{
+let bg="unattempted-bg";
+if(answers[i]===q.options[q.ans]) bg="correct-bg";
+else if(answers[i]!==undefined) bg="wrong-bg";
+
+html+=`<div class="review-box ${bg}">
+<b>Q${i+1}: ${q.q}</b><br>`;
+q.options.forEach(opt=>{
+let style="";
+if(opt===q.options[q.ans]) style="color:green;font-weight:bold;";
+if(opt===answers[i] && opt!==q.options[q.ans]) style="color:red;";
+html+=`<div style="${style}">${opt}</div>`;
+});
+html+="</div>";
+});
+review.innerHTML=html;
+}
+
+/* PDF */
+async function downloadPDF(){
+const { jsPDF } = window.jspdf;
+
+const pdf = new jsPDF('p','mm','a4');
+let y = 10;
+
+/* HEADER */
+let now = new Date();
+pdf.setFontSize(12);
+pdf.text(`Name: ${window.studentName}`,10,y);
+y+=6;
+pdf.text(`Date: ${now.toLocaleDateString()}`,10,y);
+y+=6;
+pdf.text(`Time: ${now.toLocaleTimeString()}`,10,y);
+y+=10;
+
+/* SUMMARY */
+pdf.text(`Total: ${questions.length}`,10,y); y+=6;
+pdf.text(`Correct: ${tCorrect.innerText}`,10,y); y+=6;
+pdf.text(`Wrong: ${tWrong.innerText}`,10,y); y+=6;
+pdf.text(`Not Attempted: ${tUnattempted.innerText}`,10,y); y+=6;
+pdf.text(`Score: ${tScore.innerText}`,10,y); y+=10;
+
+/* QUESTIONS */
+questions.forEach((q,i)=>{
+let text = `Q${i+1}: ${q.q}`;
+let splitQ = pdf.splitTextToSize(text, 180);
+
+if(y > 270){ pdf.addPage(); y=10; }
+pdf.text(splitQ,10,y);
+y += splitQ.length * 6;
+
+/* OPTIONS */
+q.options.forEach((opt,idx)=>{
+let label = "";
+
+if(idx === q.ans){
+label = `✔ ${opt}`; // correct
+}else if(opt === answers[i]){
+label = `✘ ${opt}`; // wrong selected
+}else{
+label = `- ${opt}`;
+}
+
+let splitOpt = pdf.splitTextToSize(label, 170);
+
+if(y > 270){ pdf.addPage(); y=10; }
+pdf.text(splitOpt,15,y);
+y += splitOpt.length * 5;
+});
+
+y+=4;
+});
+
+pdf.save("Full_Result.pdf");
+}
+
+</script>
+
+</body>
+</html>

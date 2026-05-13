@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>O level - CBT Exam</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body { margin:0; font-family:Arial; background:#f4f6f8; }
+
+.login-container{
+height:100vh; display:flex; justify-content:center; align-items:center;
+background:linear-gradient(135deg,#007bff,#00c6ff);
+}
+.login-box{
+background:white; padding:40px; border-radius:15px; width:300px;
+box-shadow:0 10px 25px rgba(0,0,0,0.2); text-align:center;
+}
+
+.header {
+background:#1a73e8;color:white;padding:15px;
+display:flex;justify-content:space-between;align-items:center;
+}
+
+.container { display:flex; height:85vh; }
+.left { width:20%; background:#fff; padding:10px; overflow:auto; }
+.right { width:80%; padding:20px; }
+
+.option {
+display:block;padding:12px;margin:8px 0;background:#eee;border-radius:8px;cursor:pointer;
+}
+
+.btn{
+padding:10px 18px;border:none;border-radius:8px;color:white;font-weight:bold;cursor:pointer;margin:5px;
+}
+.blue{ background:#007bff; }
+.green{ background:#28a745; }
+.yellow{ background:#ffc107; color:black; }
+.red{ background:#dc3545; }
+
+.palette-btn {width:40px;height:40px;margin:5px;border:none;border-radius:6px;}
+
+.result-card{background:white;padding:25px;border-radius:15px;max-width:1200px;margin:20px auto;}
+.score-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;}
+.score-box{background:#f8f9fc;padding:15px;border-radius:10px;text-align:center;}
+
+/* ✅ PERFECT CHART ALIGNMENT */
+.chart-container{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+margin-top:20px;
+}
+
+.chart-box{
+height:320px;
+background:#fff;
+padding:15px;
+border-radius:12px;
+box-shadow:0 2px 8px rgba(0,0,0,0.1);
+display:flex;
+align-items:center;
+justify-content:center;
+transition:0.3s;
+}
+.chart-box:hover{
+transform:scale(1.02);
+}
+
+.review-box{padding:12px;margin:10px 0;border-radius:8px;}
+.correct-bg{ background:#d4edda; }
+.wrong-bg{ background:#f8d7da; }
+.unattempted-bg{ background:#fff3cd; }
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="login-container">
+<div class="login-box">
+<h2>O Level - CBT Login</h2>
+<input id="user" placeholder="Enter Name"><br><br>
+<input id="pass" placeholder="Enter Mobile"><br><br>
+<button class="btn blue" onclick="loginUser()">Start Exam</button>
+<p id="loginMsg"></p>
+</div>
+</div>
+
+<!-- EXAM -->
+<div id="exam" style="display:none;">
+<div class="header">
+<div>JavaScript Part 3- CBT Examination Portal</div>
+<div id="timer"></div>
+</div>
+
+<div class="container">
+<div class="left"><div id="palette"></div></div>
+
+<div class="right">
+<h4 id="counter"></h4>
+<h3 id="question"></h3>
+<div id="options"></div>
+
+<div>
+<button class="btn blue" onclick="prev()">Prev</button>
+<button class="btn green" onclick="saveAndNext()">Next</button>
+<button class="btn yellow" onclick="markReview()">Mark Review</button>
+<button class="btn yellow" onclick="clearAnswer()">Clear</button>
+<button class="btn red" onclick="confirmSubmit()">Submit</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- RESULT -->
+<div id="result" style="display:none;">
+<div class="header">
+<div>
+📊 Result Dashboard<br>
+<small id="studentInfo"></small>
+</div>
+<button class="btn green" onclick="downloadPDF()">Download PDF</button>
+</div>
+
+<div id="resultContent" class="result-card">
+
+<div class="score-grid">
+<div class="score-box">Total<br><b id="tTotal"></b></div>
+<div class="score-box">Correct<br><b id="tCorrect"></b></div>
+<div class="score-box">Wrong<br><b id="tWrong"></b></div>
+<div class="score-box">Not Attempted<br><b id="tUnattempted"></b></div>
+<div class="score-box">Score<br><b id="tScore"></b></div>
+</div>
+
+<!-- ✅ CHARTS TOGETHER -->
+<div class="chart-container">
+  <div class="chart-box">
+    <canvas id="pieChart"></canvas>
+  </div>
+  <div class="chart-box">
+    <canvas id="barChart"></canvas>
+  </div>
+</div>
+
+<h3>📝 Question Review</h3>
+<div id="review"></div>
+
+</div>
+</div>
+
+<script>
+
+/* JavaScript questions */
+const questions = [
+  {q:"What does DOM stand for?", options:["Document Object Model","Data Object Model","Document Oriented Model","Data Oriented Model"], ans:0},
+  {q:"What is the root element of the DOM?", options:["document","window","html","body"], ans:0},
+  {q:"How do you select an element by id in JavaScript?", options:["getElementById()","getElementByClass()","querySelector()","getElementsByName()"], ans:0},
+  {q:"How do you select elements by class name?", options:["getElementsByClassName()","getElementByClass()","querySelector()","getElementsByTagName()"], ans:0},
+  {q:"What does querySelector() return?", options:["First matching element","All matching elements","Last matching element","Null"], ans:0},
+  {q:"What does querySelectorAll() return?", options:["NodeList","Array","HTMLCollection","Object"], ans:0},
+  {q:"How do you change the text content of an element?", options:["textContent","innerHTML","innerText","All of above"], ans:3},
+  {q:"What is the difference between innerHTML and textContent?", options:["innerHTML parses HTML, textContent does not","Both same","innerHTML does not parse","textContent parses HTML"], ans:0},
+  {q:"How do you change the HTML content of an element?", options:["innerHTML","textContent","outerHTML","innerText"], ans:0},
+  {q:"How do you change an attribute value?", options:["setAttribute()","getAttribute()","removeAttribute()","hasAttribute()"], ans:0},
+  {q:"How do you get an attribute value?", options:["getAttribute()","setAttribute()","removeAttribute()","hasAttribute()"], ans:0},
+  {q:"How do you check if an element has an attribute?", options:["hasAttribute()","getAttribute()","setAttribute()","removeAttribute()"], ans:0},
+  {q:"How do you remove an attribute?", options:["removeAttribute()","setAttribute()","getAttribute()","hasAttribute()"], ans:0},
+  {q:"How do you create a new element?", options:["createElement()","newElement()","makeElement()","addElement()"], ans:0},
+  {q:"How do you create a text node?", options:["createTextNode()","newText()","createText()","makeText()"], ans:0},
+  {q:"How do you append a child element?", options:["appendChild()","addChild()","insertChild()","pushChild()"], ans:0},
+  {q:"How do you insert an element before another?", options:["insertBefore()","before()","insertAfter()","prepend()"], ans:0},
+  {q:"How do you remove a child element?", options:["removeChild()","deleteChild()","remove()","delete()"], ans:0},
+  {q:"How do you replace a child element?", options:["replaceChild()","replace()","switchChild()","changeChild()"], ans:0},
+  {q:"What is the difference between parentNode and parentElement?", options:["parentElement excludes DocumentFragment","Both same","parentNode excludes DocumentFragment","No difference"], ans:0},
+  {q:"How do you access the first child of an element?", options:["firstChild","firstElementChild","Both A and B","child[0]"], ans:2},
+  {q:"How do you access the last child of an element?", options:["lastChild","lastElementChild","Both A and B","child[length-1]"], ans:2},
+  {q:"How do you access all children of an element?", options:["children","childNodes","Both A and B","childs"], ans:2},
+  {q:"What is the difference between children and childNodes?", options:["children only elements, childNodes includes text/comments","Both same","children includes everything","childNodes only elements"], ans:0},
+  {q:"How do you add a class to an element?", options:["classList.add()","classList.remove()","classList.toggle()","classList.contains()"], ans:0},
+  {q:"How do you remove a class from an element?", options:["classList.remove()","classList.add()","classList.toggle()","classList.contains()"], ans:0},
+  {q:"How do you toggle a class?", options:["classList.toggle()","classList.add()","classList.remove()","classList.contains()"], ans:0},
+  {q:"How do you check if an element has a class?", options:["classList.contains()","classList.has()","classList.includes()","classList.check()"], ans:0},
+  {q:"How do you add an event listener?", options:["addEventListener()","onEvent()","attachEvent()","bindEvent()"], ans:0},
+  {q:"How do you remove an event listener?", options:["removeEventListener()","removeEvent()","detachEvent()","unbindEvent()"], ans:0},
+  {q:"What is a click event?", options:["When element is clicked","When mouse enters","When mouse leaves","When key is pressed"], ans:0},
+  {q:"What is a mouseover event?", options:["Mouse enters element","Mouse leaves element","Mouse clicks","Mouse moves"], ans:0},
+  {q:"What is a mouseout event?", options:["Mouse leaves element","Mouse enters element","Mouse clicks","Mouse moves"], ans:0},
+  {q:"What is a keydown event?", options:["Key is pressed","Key is released","Key is held","Key is typed"], ans:0},
+  {q:"What is a load event?", options:["Page finishes loading","Element loads","Image loads","Script loads"], ans:0},
+  {q:"What is the event object?", options:["Contains event information","Contains element","Contains window","Contains document"], ans:0},
+  {q:"How do you prevent default action of an event?", options:["preventDefault()","stopPropagation()","stopImmediatePropagation()","return false"], ans:0},
+  {q:"How do you stop event bubbling?", options:["stopPropagation()","preventDefault()","stopBubbling()","cancelBubble()"], ans:0},
+  {q:"What is event delegation?", options:["Attach listener to parent","Attach listener to each child","Attach listener to window","Attach listener to document"], ans:0},
+  {q:"What is the BOM?", options:["Browser Object Model","Document Object Model","Binary Object Model","Basic Object Model"], ans:0},
+  {q:"What is the window object?", options:["Global object in browser","Local object","Document object","Element object"], ans:0},
+  {q:"What does window.innerWidth return?", options:["Browser viewport width","Screen width","Document width","Element width"], ans:0},
+  {q:"What does window.innerHeight return?", options:["Browser viewport height","Screen height","Document height","Element height"], ans:0},
+  {q:"What does screen.width return?", options:["Screen width","Viewport width","Document width","Window width"], ans:0},
+  {q:"What does screen.height return?", options:["Screen height","Viewport height","Document height","Window height"], ans:0},
+  {q:"How do you open a new window?", options:["window.open()","window.new()","window.create()","window.popup()"], ans:0},
+  {q:"How do you close the current window?", options:["window.close()","window.exit()","window.kill()","window.terminate()"], ans:0},
+  {q:"What is window.location?", options:["Current page URL","Page history","Page reload","Page navigation"], ans:0},
+  {q:"How do you redirect to another page?", options:["window.location.href = 'url'","window.location = 'url'","location.href = 'url'","All of above"], ans:3},
+  {q:"What does window.location.reload() do?", options:["Reloads current page","Redirects to new page","Goes back","Goes forward"], ans:0},
+  {q:"What is window.history?", options:["Browser history","Page history","Session history","Navigation history"], ans:0},
+  {q:"How do you go back in history?", options:["history.back()","history.goBack()","history.backward()","history.previous()"], ans:0},
+  {q:"How do you go forward in history?", options:["history.forward()","history.goForward()","history.next()","history.advance()"], ans:0},
+  {q:"What is window.navigator?", options:["Browser information","Network information","System information","Device information"], ans:0},
+  {q:"What does navigator.userAgent return?", options:["Browser user agent string","Browser version","Browser name","OS name"], ans:0},
+  {q:"What is window.screen?", options:["Screen information","Display information","Monitor information","Resolution information"], ans:0},
+  {q:"What is window.localStorage?", options:["Persistent storage","Session storage","Cookie storage","Cache storage"], ans:0},
+  {q:"How do you store data in localStorage?", options:["localStorage.setItem(key, value)","localStorage.store(key, value)","localStorage.save(key, value)","localStorage.put(key, value)"], ans:0},
+  {q:"How do you retrieve data from localStorage?", options:["localStorage.getItem(key)","localStorage.get(key)","localStorage.retrieve(key)","localStorage.fetch(key)"], ans:0},
+  {q:"How do you remove data from localStorage?", options:["localStorage.removeItem(key)","localStorage.delete(key)","localStorage.clear(key)","localStorage.erase(key)"], ans:0},
+  {q:"How do you clear all localStorage data?", options:["localStorage.clear()","localStorage.removeAll()","localStorage.deleteAll()","localStorage.empty()"], ans:0},
+  {q:"What is window.sessionStorage?", options:["Session storage","Persistent storage","Cookie storage","Cache storage"], ans:0},
+  {q:"What is the difference between localStorage and sessionStorage?", options:["localStorage persists, sessionStorage clears on tab close","Both persist","Both clear","sessionStorage persists"], ans:0},
+  {q:"What is a cookie?", options:["Small data stored by browser","Session storage","Local storage","Cache"], ans:0},
+  {q:"How do you create a cookie?", options:["document.cookie = 'name=value'","cookie.set('name', 'value')","setCookie('name', 'value')","createCookie('name', 'value')"], ans:0},
+  {q:"What is the purpose of the fetch API?", options:["Make HTTP requests","Make WebSocket","Make SSE","Make RTC"], ans:0},
+  {q:"What does fetch() return?", options:["Promise","Callback","Observable","Event"], ans:0},
+  {q:"How do you handle fetch response?", options:[".then(response => response.json())",".then(response => response.text())",".then(response => response.blob())","All of above"], ans:3},
+  {q:"What is the difference between GET and POST?", options:["GET retrieves, POST sends","POST retrieves, GET sends","Both retrieve","Both send"], ans:0},
+  {q:"How do you send JSON data in fetch?", options:["body: JSON.stringify(data)","data: JSON.stringify(data)","json: data","content: data"], ans:0},
+  {q:"What is the purpose of XMLHttpRequest?", options:["Make HTTP requests","Make WebSocket","Make SSE","Make RTC"], ans:0},
+  {q:"What are the readyState values in XHR?", options:["0-4","1-5","0-3","1-4"], ans:0},
+  {q:"What does readyState 4 mean?", options:["Request complete","Request sent","Request loading","Request not initialized"], ans:0},
+  {q:"What does status 200 mean?", options:["OK","Not Found","Server Error","Bad Request"], ans:0},
+  {q:"What does status 404 mean?", options:["Not Found","OK","Server Error","Forbidden"], ans:0},
+  {q:"What does status 500 mean?", options:["Server Error","OK","Not Found","Bad Request"], ans:0},
+  {q:"What is CORS?", options:["Cross-Origin Resource Sharing","Cross-Origin Request Security","Cross-Origin Resource Security","Cross-Origin Request Sharing"], ans:0},
+  {q:"What is the purpose of the Same-Origin Policy?", options:["Prevent cross-origin requests","Allow cross-origin requests","Prevent all requests","Allow all requests"], ans:0},
+  {q:"How do you enable CORS?", options:["Access-Control-Allow-Origin header","CORS header","Allow-CORS header","Cross-Origin header"], ans:0}
+];
+  
+
+let index=0;
+let answers=new Array(questions.length).fill(undefined);
+let status=new Array(questions.length).fill("notVisited");
+let time=3600,timerInterval;
+
+/* LOGIN */
+function loginUser(){
+let name=user.value.trim();
+let mobile=pass.value.trim();
+
+if(name.length<2){ loginMsg.innerText="Enter valid name"; return;}
+if(!/^\d{10}$/.test(mobile)){ loginMsg.innerText="Enter valid mobile"; return;}
+
+window.studentName=name;
+
+login.style.display="none";
+exam.style.display="block";
+
+startTimer();
+loadQ();
+}
+
+/* TIMER */
+function startTimer(){
+timerInterval=setInterval(()=>{
+time--;
+let m=Math.floor(time/60);
+let s=time%60;
+timer.innerText=`Time: ${m}:${s.toString().padStart(2,'0')}`;
+if(time<=0) submitExam();
+},1000);
+}
+
+/* LOAD */
+function loadQ(){
+if(status[index]==="notVisited") status[index]="notAnswered";
+
+let q=questions[index];
+question.innerText=(index+1)+". "+q.q;
+
+let html="";
+q.options.forEach(opt=>{
+let checked=(answers[index]===opt)?"checked":"";
+html+=`<label class="option">
+<input type="radio" name="q${index}" ${checked}
+onchange="selectOption('${opt}')"> ${opt}
+</label>`;
+});
+options.innerHTML=html;
+
+updateCounter();
+loadPalette();
+}
+
+function selectOption(val){ answers[index]=val; status[index]="answered"; loadPalette(); }
+function prev(){ if(index>0){index--; loadQ();}}
+function saveAndNext(){ if(index<questions.length-1){index++; loadQ();}}
+function clearAnswer(){ answers[index]=undefined; status[index]="notAnswered"; loadQ(); }
+function markReview(){ status[index]="review"; loadPalette(); }
+
+function updateCounter(){
+counter.innerText=`Answered: ${answers.filter(a=>a!==undefined).length}/${questions.length}`;
+}
+
+function loadPalette(){
+let html="";
+for(let i=0;i<questions.length;i++){
+let color="#ccc";
+if(status[i]=="answered") color="green";
+else if(status[i]=="notAnswered") color="red";
+else if(status[i]=="review") color="orange";
+
+html+=`<button class="palette-btn" style="background:${color}" onclick="goTo(${i})">${i+1}</button>`;
+}
+palette.innerHTML=html;
+}
+
+function goTo(i){ index=i; loadQ(); }
+function confirmSubmit(){ if(confirm("Submit exam?")) submitExam(); }
+
+/* RESULT */
+function submitExam(){
+clearInterval(timerInterval);
+
+exam.style.display="none";
+result.style.display="block";
+
+/* HEADER INFO */
+let now=new Date();
+studentInfo.innerText=`Name: ${window.studentName} | Date: ${now.toLocaleDateString()} | Time: ${now.toLocaleTimeString()}`;
+
+let correct=0,wrong=0,unattempted=0;
+
+questions.forEach((q,i)=>{
+if(answers[i]===undefined) unattempted++;
+else if(answers[i]===q.options[q.ans]) correct++;
+else wrong++;
+});
+
+tTotal.innerText=questions.length;
+tCorrect.innerText=correct;
+tWrong.innerText=wrong;
+tUnattempted.innerText=unattempted;
+tScore.innerText=((correct/questions.length)*100).toFixed(1)+"%";
+
+/* ✅ PERFECT CHARTS */
+new Chart(pieChart,{
+type:"pie",
+data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]},
+options:{responsive:true,maintainAspectRatio:false}
+});
+
+new Chart(barChart,{
+type:"bar",
+data:{labels:["Correct","Wrong","Unattempted"],datasets:[{data:[correct,wrong,unattempted]}]},
+options:{responsive:true,maintainAspectRatio:false}
+});
+
+generateReview();
+}
+
+/* REVIEW */
+function generateReview(){
+let html="";
+questions.forEach((q,i)=>{
+let bg="unattempted-bg";
+if(answers[i]===q.options[q.ans]) bg="correct-bg";
+else if(answers[i]!==undefined) bg="wrong-bg";
+
+html+=`<div class="review-box ${bg}">
+<b>Q${i+1}: ${q.q}</b><br>`;
+q.options.forEach(opt=>{
+let style="";
+if(opt===q.options[q.ans]) style="color:green;font-weight:bold;";
+if(opt===answers[i] && opt!==q.options[q.ans]) style="color:red;";
+html+=`<div style="${style}">${opt}</div>`;
+});
+html+="</div>";
+});
+review.innerHTML=html;
+}
+
+/* PDF */
+async function downloadPDF(){
+const { jsPDF } = window.jspdf;
+
+const pdf = new jsPDF('p','mm','a4');
+let y = 10;
+
+/* HEADER */
+let now = new Date();
+pdf.setFontSize(12);
+pdf.text(`Name: ${window.studentName}`,10,y);
+y+=6;
+pdf.text(`Date: ${now.toLocaleDateString()}`,10,y);
+y+=6;
+pdf.text(`Time: ${now.toLocaleTimeString()}`,10,y);
+y+=10;
+
+/* SUMMARY */
+pdf.text(`Total: ${questions.length}`,10,y); y+=6;
+pdf.text(`Correct: ${tCorrect.innerText}`,10,y); y+=6;
+pdf.text(`Wrong: ${tWrong.innerText}`,10,y); y+=6;
+pdf.text(`Not Attempted: ${tUnattempted.innerText}`,10,y); y+=6;
+pdf.text(`Score: ${tScore.innerText}`,10,y); y+=10;
+
+/* QUESTIONS */
+questions.forEach((q,i)=>{
+let text = `Q${i+1}: ${q.q}`;
+let splitQ = pdf.splitTextToSize(text, 180);
+
+if(y > 270){ pdf.addPage(); y=10; }
+pdf.text(splitQ,10,y);
+y += splitQ.length * 6;
+
+/* OPTIONS */
+q.options.forEach((opt,idx)=>{
+let label = "";
+
+if(idx === q.ans){
+label = `✔ ${opt}`; // correct
+}else if(opt === answers[i]){
+label = `✘ ${opt}`; // wrong selected
+}else{
+label = `- ${opt}`;
+}
+
+let splitOpt = pdf.splitTextToSize(label, 170);
+
+if(y > 270){ pdf.addPage(); y=10; }
+pdf.text(splitOpt,15,y);
+y += splitOpt.length * 5;
+});
+
+y+=4;
+});
+
+pdf.save("Full_Result.pdf");
+}
+
+</script>
+
+</body>
+</html>
